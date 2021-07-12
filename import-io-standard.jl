@@ -1,3 +1,4 @@
+#cd("C:\\Users\\jaber\\OneDrive\\Documents\\AIBE\\sam")
 #using Ipopt: optimize!
 using Base: Int64
 using XLSX: length
@@ -303,20 +304,22 @@ else
 end
 #assuming that values can be negative
 #solve missing values with Ipopt
+println("ras for table 8")
 mod8 = Model(Ipopt.Optimizer);
-@variable(mod8, x[1:(length(tableName)-1), 1:(length(tableName)-1)]);
-@NLobjective(mod8, Min, sum((x[i,j]) ^ 2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
-for i in 1:(length(tableName)-1);
-    @constraint(mod8, sum(x[:,i]) == table8[tableDict["Total"],i]-sum(table8[1:(length(tableName)-1),i]));
-    @constraint(mod8, sum(x[i,:]) == table8[i,tableDict["Total"]]-sum(table8[i,1:(length(tableName)-1)]));
-    @constraint(mod8, x[tableDict["General Government"],i] == 0);
-    @constraint(mod8, x[i,tableDict["General Government"]] == 0);
-end;
-@constraint(mod8, x[tableDict["External"],tableDict["External"]] == 0);
-@constraint(mod8, x[tableDict["Households"],tableDict["Households"]] == 0);
+@variable(mod8, x[1:3, 1:4]>=0);
+@NLobjective(mod8, Min, sum((x[i,j]) ^ 2 for i in 1:3, j in 1:4));
+@constraint(mod8, sum(x[:,1]) == table8[tableDict["Total"],1]);
+@constraint(mod8, sum(x[:,2]) == table8[tableDict["Total"],2]);
+@constraint(mod8, sum(x[:,3]) == table8[tableDict["Total"],3]);
+@constraint(mod8, sum(x[:,4]) == table8[tableDict["Total"],5]);
+@constraint(mod8, sum(x[1,:]) == table8[2,tableDict["Total"]]);
+@constraint(mod8, sum(x[2,:]) == table8[3,tableDict["Total"]]);
+@constraint(mod8, sum(x[3,:]) == table8[5,tableDict["Total"]]);
+#@constraint(mod8, x[3,4] == 0);
 optimize!(mod8);
-table8[1:(length(tableName)-1), 1:(length(tableName)-1)] = table8[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
-
+y= value.(x)
+#table8b[[2,3,5], []] = table8[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
+#println(table8)
 
 #=spread the external receivable totals between fin and non-fin Corporations
 table8Step3 = zeros(length(tableName),length(tableName));
@@ -332,42 +335,257 @@ end
 table8 = table8+table8Step3;
 =#
 
-#=table 9
+#table 9
 #initialising table
 table9 = zeros(length(tableName),length(tableName));
 #allocating total collumn and row data
 table9[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAHouseInc[1,:]))]);
 table9[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNANonFinInc[1,:]))]);
 table9[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAFinInc[1,:]))]);
-table9[tableDict["Total"],tableDict["General Government"]] = first(ASNAGovInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAGovInc[1,:]))]);
-table9[tableDict["Total"],tableDict["External"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("receivable - Reinvested", x), string.(ASNAExtInc[1,:]))]);
+table9[tableDict["Total"],tableDict["General Government"]] = first(ASNAGovInc[ASNAYearRow,findall(x -> occursin("General government ;  Property income receivable - Rent on natural assets ;", x), string.(ASNAGovInc[1,:]))]);
+table9[tableDict["Total"],tableDict["External"]] = 0.0;
 
 table9[tableDict["Households"],tableDict["Total"]] =  first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("payable - Rent on natural", x), string.(ASNAHouseInc[1,:]))]);
 table9[tableDict["Non-Financial Corporations"],tableDict["Total"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("payable - Rent on natural", x), string.(ASNANonFinInc[1,:]))]);
 table9[tableDict["Financial Corporations"],tableDict["Total"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("payable - Rent on natural", x), string.(ASNAFinInc[1,:]))]);
-table9[tableDict["General Government"],tableDict["Total"]] =  first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAHouseInc[1,:]))]);
-table9[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("payable - Reinvested", x), string.(ASNAExtInc[1,:]))]);
+table9[tableDict["General Government"],tableDict["Total"]] =  0.0;
+table9[tableDict["External"],tableDict["Total"]] = 0.0;
 
 if 0.98*sum(table9[:,length(tableName)])<sum(table9[length(tableName),:])<1.02*sum(table9[:,length(tableName)])
 else
     error("Large discrepancy in row and collumn total sums in table 9")
 end
 
+#solve missing values with Ipopt
+mod9 = Model(Ipopt.Optimizer);
+@variable(mod9, x[1:(length(tableName)-1), 1:(length(tableName)-1)]>=0);
+@NLobjective(mod9, Min, sum((x[i,j]) ^ 2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
+for i in 1:(length(tableName)-1);
+    @constraint(mod9, sum(x[:,i]) == table9[tableDict["Total"],i]-sum(table9[1:(length(tableName)-1),i]));
+    @constraint(mod9, sum(x[i,:]) == table9[i,tableDict["Total"]]-sum(table9[i,1:(length(tableName)-1)]));
+end;
+@constraint(mod9, x[tableDict["Households"],tableDict["Households"]] == 0);
+@constraint(mod9, x[tableDict["Households"],tableDict["Non-Financial Corporations"]] == 0);
+optimize!(mod9);
+table9[1:(length(tableName)-1), 1:(length(tableName)-1)] = table9[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
+
+#table 10
+#initialising table
+table10 = zeros(length(tableName),length(tableName));
+#allocating total collumn and row data
+table10[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("Social assistance benefits", x), string.(ASNAHouseInc[1,:]))]);
+table10[tableDict["General Government"],tableDict["Total"]] =  table10[tableDict["Total"],tableDict["Households"]];
+#filling in missing values
+table10[tableDict["General Government"],tableDict["Households"]] =  table10[tableDict["Total"],tableDict["Households"]];
+
+#table 11
+#initialising table
+table11 = zeros(length(tableName),length(tableName));
+#allocating total collumn and row data
+#assuming that the large discrepancy in the paid and received claims is a result of households not reporting small claims
+#table11[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Non-life", x), string.(ASNAHouseInc[1,:]))]);
+table11[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Non-life", x), string.(ASNANonFinInc[1,:]))]);
+table11[tableDict["Financial Corporations"],tableDict["Total"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("payable - Non-life", x), string.(ASNAFinInc[1,:]))]);
+table11[tableDict["Total"],tableDict["Households"]]= table11[tableDict["Financial Corporations"],tableDict["Total"]] - table11[tableDict["Total"],tableDict["Non-Financial Corporations"]];
+if 0.98*sum(table11[:,length(tableName)])<sum(table11[length(tableName),:])<1.02*sum(table11[:,length(tableName)])
+else
+    error("Large discrepancy in row and collumn total sums in table 11")
+end
+#filling in missing values
+table11[tableDict["Financial Corporations"],tableDict["Households"]]=table11[tableDict["Total"],tableDict["Households"]];
+table11[tableDict["Financial Corporations"],tableDict["Non-Financial Corporations"]] = table11[tableDict["Total"],tableDict["Non-Financial Corporations"]];
+
+#table 12
+#initialising table
+table12 = zeros(length(tableName),length(tableName));
+#allocating total collumn and row data
+#also assuming in the same manner as in table 11 that the missing data is from the household side
+table12[tableDict["Total"],tableDict["Households"]] = 0.0;
+table12[tableDict["Total"],tableDict["Non-Financial Corporations"]] = 0.0;
+table12[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("receivable - Net non-life insurance premiums", x), string.(ASNAFinInc[1,:]))]);
+table12[tableDict["Total"],tableDict["General Government"]] = 0.0;
+table12[tableDict["Total"],tableDict["External"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("receivable - Non-life insurance transfers", x), string.(ASNAExtInc[1,:]))]);
+
+#table12[tableDict["Households"],tableDict["Total"]] =  first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("payable - Net non-life insurance premiums", x), string.(ASNAHouseInc[1,:]))]);
+table12[tableDict["Non-Financial Corporations"],tableDict["Total"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("payable - Net non-life insurance premiums", x), string.(ASNANonFinInc[1,:]))]);
+table12[tableDict["Financial Corporations"],tableDict["Total"]] = 0.0;
+table12[tableDict["General Government"],tableDict["Total"]] =  0.0;
+table12[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("payable - Non-life insurance transfers", x), string.(ASNAExtInc[1,:]))]);
+table12[tableDict["Households"],tableDict["Total"]] = sum(table12[length(tableName),:])-sum(table12[:,length(tableName)]);
+
+if 0.98*sum(table12[:,length(tableName)])<sum(table12[length(tableName),:])<1.02*sum(table12[:,length(tableName)])
+else
+    error("Large discrepancy in row and collumn total sums in table 12")
+end
+
+#filling in empty values
+table12[tableDict["External"],tableDict["Financial Corporations"]] = table12[tableDict["External"],tableDict["Total"]];
+#=
+mod12 = Model(Ipopt.Optimizer);
+@variable(mod12, x[1:(length(tableName)-1), 1:(length(tableName)-1)]>=0);
+@NLobjective(mod12, Min, sum((x[i,j])^2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
+for i in 1:(length(tableName)-1);
+    @constraint(mod12, sum(x[:,i]) == table12[tableDict["Total"],i]-sum(table12[1:(length(tableName)-1),i]));
+    @constraint(mod12, sum(x[i,:]) == table12[i,tableDict["Total"]]-sum(table12[i,1:(length(tableName)-1)]));
+end;
+optimize!(mod12);
+table12[1:(length(tableName)-1), 1:(length(tableName)-1)] = table12[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
+=#
 #spread the external receivable totals between fin and non-fin Corporations
-table9Step3 = zeros(length(tableName),length(tableName));
-table9Step3Row = [tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["External"]];
-table9Step3Col = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["External"]];
-for i in table9Step3Col;
-    for ring in table9Step3Row;
-        table9Step3[ring,i] = (table9[tableDict["Total"],i]-sum(table9[1:(length(tableName)-1),i]))*(
-            table9[ring,tableDict["Total"]]-sum(table9[ring,1:(length(tableName)-1)]))/sum(table9[
-            table9Step3Row,tableDict["Total"]]-sum(eachcol(table9[table9Step3Row,1:(length(tableName)-1)])));
+table12Step3 = zeros(length(tableName),length(tableName));
+table12Step3Row = [tableDict["Non-Financial Corporations"],tableDict["Households"]];
+table12Step3Col = [tableDict["External"],tableDict["Financial Corporations"]];
+for i in table12Step3Col;
+    for ring in table12Step3Row;
+        table12Step3[ring,i] = (table12[tableDict["Total"],i]-sum(table12[1:(length(tableName)-1),i]))*(
+            table12[ring,tableDict["Total"]]-sum(table12[ring,1:(length(tableName)-1)]))/sum(table12[
+            table12Step3Row,tableDict["Total"]]-sum(eachcol(table12[table12Step3Row,1:(length(tableName)-1)])));
     end
 end
-table9 = table9+table9Step3;
+table12 = table12+table12Step3;
+
+#table 13
+#initialising table
+table13 = zeros(length(tableName),length(tableName));
+#allocating total collumn and row data
+table13[tableDict["Total"],tableDict["Households"]] = (first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Total other current transfers ;", x), string.(ASNAHouseInc[1,:]))])
++first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Current transfers to ", x), string.(ASNAHouseInc[1,:]))]));
+table13[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Other current transfers ;", x), string.(ASNANonFinInc[1,:]))]);
+table13[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("receivable - Other current transfers ;", x), string.(ASNAFinInc[1,:]))]);
+table13[tableDict["Total"],tableDict["General Government"]] = first(ASNAGovInc[ASNAYearRow,findall(x -> occursin("General government ;  Secondary income receivable - Other current transfers ;", x), string.(ASNAGovInc[1,:]))]);
+table13[tableDict["Total"],tableDict["External"]] = (first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("receivable - Other current transfers ;", x), string.(ASNAExtInc[1,:]))])
++first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("receivable - Current international cooperation ;", x), string.(ASNAExtInc[1,:]))]));
+
+table13[tableDict["Households"],tableDict["Total"]] =  first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("payable - Total other current transfers ;", x), string.(ASNAHouseInc[1,:]))]);
+table13[tableDict["Non-Financial Corporations"],tableDict["Total"]] = (first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("payable - Current transfers to non-profit institutions ;", x), string.(ASNANonFinInc[1,:]))])
++ first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("payable - Other current transfers ;", x), string.(ASNANonFinInc[1,:]))]));
+table13[tableDict["Financial Corporations"],tableDict["Total"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("payable - Other current transfers ;", x), string.(ASNAFinInc[1,:]))]);
+table13[tableDict["General Government"],tableDict["Total"]] =  sum(ASNAGovInc[ASNAYearRow,findall(x -> occursin("General government ;  Secondary income payable - Other current transfers -", x), string.(ASNAGovInc[1,:]))]);
+table13[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("payable - Other current transfers", x), string.(ASNAExtInc[1,:]))]);
+
+
+if 0.98*sum(table13[:,length(tableName)])<sum(table13[length(tableName),:])<1.02*sum(table13[:,length(tableName)])
+else
+    error("Large discrepancy in row and collumn total sums in table 13")
+end
+
+#filling in empty values
+table13Step3 = zeros(length(tableName),length(tableName));
+table13Step3Row = [tableDict["Non-Financial Corporations"],tableDict["External"]];
+table13Step3Col = [tableDict["General Government"]];
+for i in table13Step3Col;
+    for ring in table13Step3Row;
+        table13Step3[ring,i] = (table13[tableDict["Total"],i]-sum(table13[1:(length(tableName)-1),i]))*(
+            table13[ring,tableDict["Total"]]-sum(table13[ring,1:(length(tableName)-1)]))/sum(table13[
+            table13Step3Row,tableDict["Total"]]-sum(eachcol(table13[table13Step3Row,1:(length(tableName)-1)])));
+    end
+end
+table13 = table13+table13Step3;
+
+table13Step3 = zeros(length(tableName),length(tableName));
+table13Step3Row = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["General Government"],tableDict["External"]];
+table13Step3Col = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["External"]];
+for i in table13Step3Col;
+    for ring in table13Step3Row;
+        table13Step3[ring,i] = (table13[tableDict["Total"],i]-sum(table13[1:(length(tableName)-1),i]))*(
+            table13[ring,tableDict["Total"]]-sum(table13[ring,1:(length(tableName)-1)]))/sum(table13[
+            table13Step3Row,tableDict["Total"]]-sum(eachcol(table13[table13Step3Row,1:(length(tableName)-1)])));
+    end
+end
+table13 = table13+table13Step3;
+
+#table 14
+#initialising table
+table14 = zeros(length(tableName),length(tableName));
+#filling in data from ASNA
+table14[tableDict["General Government"],tableDict["Households"]] = first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Capital transfers, receivable from general government ;", x), string.(ASNAHouseCap[1,:]))]);
+table14[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, receivable ;", x), string.(ASNAHouseCap[1,:]))])+table14[tableDict["General Government"],tableDict["Households"]];
+table14[tableDict["General Government"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Capital transfers, receivable from general government ;", x), string.(ASNANonFinCap[1,:]))]);
+table14[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, receivable ;", x), string.(ASNANonFinCap[1,:]))])+table14[tableDict["General Government"],tableDict["Non-Financial Corporations"]];
+table14[tableDict["General Government"],tableDict["Financial Corporations"]] = first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Capital transfers, receivable from general government ;", x), string.(ASNAFinCap[1,:]))]);
+table14[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, receivable ;", x), string.(ASNAFinCap[1,:]))])+table14[tableDict["General Government"],tableDict["Financial Corporations"]];
+table14[tableDict["Households"],tableDict["General Government"]] = first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Capital transfers, payable to general government ;", x), string.(ASNAHouseCap[1,:]))]);
+table14[tableDict["Non-Financial Corporations"],tableDict["General Government"]] = first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Capital transfers, payable to general government ;", x), string.(ASNANonFinCap[1,:]))]);
+table14[tableDict["Financial Corporations"],tableDict["General Government"]] = first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Capital transfers, payable to general government ;", x), string.(ASNAFinCap[1,:]))]);
+table14[tableDict["Total"],tableDict["General Government"]] = first(ASNAGovCap[ASNAYearRow,findall(x -> occursin("General government ;  Capital transfers, receivable ;", x), string.(ASNAGovCap[1,:]))]);
+table14[tableDict["Total"],tableDict["External"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("Capital transfers, receivable ;", x), string.(ASNAExtInc[1,:]))]);
+table14[tableDict["Households"],tableDict["Total"]] = first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, payable ;", x), string.(ASNAHouseCap[1,:]))])+table14[tableDict["Households"],tableDict["General Government"]];
+table14[tableDict["Non-Financial Corporations"],tableDict["Total"]] = first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, payable ;", x), string.(ASNANonFinCap[1,:]))])+table14[tableDict["Non-Financial Corporations"],tableDict["General Government"]];
+table14[tableDict["Financial Corporations"],tableDict["Total"]] = first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, payable ;", x), string.(ASNAFinCap[1,:]))])+table14[tableDict["Financial Corporations"],tableDict["General Government"]];
+table14[tableDict["General Government"],tableDict["Total"]] = first(ASNAGovCap[ASNAYearRow,findall(x -> occursin("General government ;  Capital transfers, payable ;", x), string.(ASNAGovCap[1,:]))]);
+table14[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("Capital transfers, payable ;", x), string.(ASNAExtInc[1,:]))]);
+if 0.98*sum(table14[:,length(tableName)])<sum(table14[length(tableName),:])<1.02*sum(table14[:,length(tableName)])
+else
+    error("Large discrepancy in row and collumn total sums in table 14")
+end
+
+#solve missing values with Ipopt
+mod14 = Model(Ipopt.Optimizer);
+@variable(mod14, x[1:(length(tableName)-1), 1:(length(tableName)-1)]>=0);
+@NLobjective(mod14, Min, sum((x[i,j]) ^ 2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
+for i in 1:(length(tableName)-1);
+    @constraint(mod14, sum(x[:,i]) == table14[tableDict["Total"],i]-sum(table14[1:(length(tableName)-1),i]));
+    @constraint(mod14, sum(x[i,:]) == table14[i,tableDict["Total"]]-sum(table14[i,1:(length(tableName)-1)]));
+    @constraint(mod14, x[i,i] == 0);
+end;
+
+optimize!(mod14);
+table14[1:(length(tableName)-1), 1:(length(tableName)-1)] = table14[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
+
+#table 15
+#initialising table
+table15 = zeros(length(tableName),length(tableName));
+#allocating total collumn and row data
+if first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))])<=0
+    table15[tableDict["Households"],tableDict["Total"]] = abs(first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))]));
+else
+    table15[tableDict["Total"],tableDict["Households"]] = abs(first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))]));
+end
+if first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNANonFinCap[1,:]))])<=0
+    table15[tableDict["Non-Financial Corporations"],tableDict["Total"]] = abs(first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNANonFinCap[1,:]))]));
+else
+    table15[tableDict["Total"],tableDict["Non-Financial Corporations"]] = abs(first(ASNANonFinCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNANonFinCap[1,:]))]));
+end
+if first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAFinCap[1,:]))])<=0
+    table15[tableDict["Financial Corporations"],tableDict["Total"]] = abs(first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAFinCap[1,:]))]));
+else
+    table15[tableDict["Total"],tableDict["Financial Corporations"]] = abs(first(ASNAFinCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAFinCap[1,:]))]));
+end
+if first(ASNAGovCap[ASNAYearRow,findall(x -> occursin("General government ;  Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAGovCap[1,:]))])<=0
+    table15[tableDict["General Government"],tableDict["Total"]] = abs(first(ASNAGovCap[ASNAYearRow,findall(x -> occursin("General government ;  Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAGovCap[1,:]))]));
+else
+    table15[tableDict["Total"],tableDict["General Government"]] = abs(first(ASNAGovCap[ASNAYearRow,findall(x -> occursin("General government ;  Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAGovCap[1,:]))]));
+end
+if first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAExtInc[1,:]))])<=0
+    table15[tableDict["External"],tableDict["Total"]] = abs(first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAExtInc[1,:]))]));
+else
+    table15[tableDict["Total"],tableDict["External"]] = abs(first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAExtInc[1,:]))]));
+end
+
+if 0.98*sum(table15[:,length(tableName)])<sum(table15[length(tableName),:])<1.02*sum(table15[:,length(tableName)])
+else
+    error("Large discrepancy in row and collumn total sums in table 15")
+end
+
+#solve missing values with Ipopt
+mod15 = Model(Ipopt.Optimizer);
+@variable(mod15, x[1:(length(tableName)-1), 1:(length(tableName)-1)]>=0);
+@NLobjective(mod15, Min, sum((x[i,j]) ^ 2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
+for i in 1:(length(tableName)-1);
+    @constraint(mod15, sum(x[:,i]) == table15[tableDict["Total"],i]-sum(table15[1:(length(tableName)-1),i]));
+    @constraint(mod15, sum(x[i,:]) == table15[i,tableDict["Total"]]-sum(table15[i,1:(length(tableName)-1)]));
+    @constraint(mod15, x[i,i] == 0);
+end;
+
+optimize!(mod15);
+table15[1:(length(tableName)-1), 1:(length(tableName)-1)] = table15[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
+
+#=table 16
+#initialising table
+table16aNameRow = ["Net Saving", "Net capital transfers", "Gross fixed capital formation", "Net lending (+) / borrowing (-)"]
+table16aRowDict = Dict(table16aNameRow .=> [1:1:length(table16aNameRow);]);
+table16a = zeros(length(table16aNameRow),length(tableName));
 =#
-
-
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
@@ -407,3 +625,7 @@ df[!, "IOCode"]=IOcode
 insertcols!(df, 2, :name => vector)
 D = df2dict(df, :IOCode, :x3)
 =#
+
+#notes
+#double check for missing accounts i.e. they said 0 for 96-97 so they were made to be 0 for this year, but may not be in actuality
+#also check for other missing accounts, confusingly labelled so skipped over etc.
