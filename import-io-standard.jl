@@ -11,7 +11,7 @@ Pkg.add("JuMP")
 Pkg.add("Ipopt")
 =#
 using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt;
-IOSource = XLSX.readdata("IO.xlsx", "io-table-5!A1:DV130");
+IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
 
 #filepath cross system compatability code
 if Sys.KERNEL === :NT || kern === :Windows
@@ -28,13 +28,14 @@ finalTotalsRow = findall(x -> occursin("Australian Production", x), string.(IOSo
 finalDemandCol = findall(x -> occursin('Q', x), string.(IOSource[3,:]));
 factorRow = findall(x -> occursin('P', x), string.(IOSource[:,1]));
 IOSourceCol = vcat(intermediaryTotalsCol, finalDemandCol, finalTotalsCol);
-IOSourceRow = vcat(intermediaryTotalsRow, factorRow, finalTotalsRow);
+IOSourceRow = vcat(intermediaryTotalsRow, factorRow[1:length(factorRow)-1], finalTotalsRow);
 #initialising IO
 IO = zeros(length(IOSourceRow), length(IOSourceCol));
 #import numerical data into IO
 IO[1:length(IOSourceRow), 1:length(IOSourceCol)] = IOSource[IOSourceRow, IOSourceCol];
 #creating vectors of titles for IO
 IOCodeRow = IOSource[IOSourceRow, 1];
+IOCodeRow[length(IOSourceRow)] = "T2";
 IOCodeCol = IOSource[3, IOSourceCol];
 IONameRow = IOSource[IOSourceRow, 2];
 IONameCol = IOSource[2, IOSourceCol];
@@ -55,10 +56,10 @@ IOCapForm = findall(x -> occursin("Capital Formation", x), IONameCol);
 IOChangeInv = findall(x -> occursin("Changes in Inventories", x), IONameCol);
 
 #importing relevant ASNA data for table 5
-ASNAHouseCap = ExcelReaders.readxl("ASNAData"*pathmark*"5204039_Household_Capital_Account.xls", "Data1!A1:T71");
-ASNANonFinCap = ExcelReaders.readxl("ASNAData"*pathmark*"5204018_NonFin_Corp_Capital_Account.xls", "Data1!A1:T71");
-ASNAFinCap = ExcelReaders.readxl("ASNAData"*pathmark*"5204026_Fin_Corp_Capital_Account.xls", "Data1!A1:S71");
-ASNAGovCap = ExcelReaders.readxl("ASNAData"*pathmark*"5204032_GenGov_Capital_Account.xls", "Data1!A1:AV71");
+ASNAHouseCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204039_Household_Capital_Account.xls", "Data1");
+ASNANonFinCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204018_NonFin_Corp_Capital_Account.xls", "Data1");
+ASNAFinCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204026_Fin_Corp_Capital_Account.xls", "Data1");
+ASNAGovCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204032_GenGov_Capital_Account.xls", "Data1");
 ASNAYearRow = findall(x -> occursin("2019", x), string.(ASNAHouseCap[:,1]));
 
 #table 5
@@ -97,11 +98,11 @@ table5a[table5aRowDict["Total fixed capital expenditure"], table5aColDict["Gener
 
 #filling in non-total values
 for ring in [1:1:length(table5aColDict)-1;];
-    table5a[table5aRowDict["Domestic Commodities"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["T1"],IOCapForm[1]] / IO[IORowDict[missing],IOCapForm[1]];
-    table5a[table5aRowDict["Imported Commodities, complementary"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P5"],IOCapForm[1]] / IO[IORowDict[missing],IOCapForm[1]];
-    table5a[table5aRowDict["Imported Commodities, competing"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P6"],IOCapForm[1]] / IO[IORowDict[missing],IOCapForm[1]];
-    table5a[table5aRowDict["Taxes less subsidies on products"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P3"],IOCapForm[1]] / IO[IORowDict[missing],IOCapForm[1]];
-    table5a[table5aRowDict["Other taxes less subsidies on investment"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P4"],IOCapForm[1]] / IO[IORowDict[missing],IOCapForm[1]];
+    table5a[table5aRowDict["Domestic Commodities"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["T1"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
+    table5a[table5aRowDict["Imported Commodities, complementary"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P5"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
+    table5a[table5aRowDict["Imported Commodities, competing"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P6"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
+    table5a[table5aRowDict["Taxes less subsidies on products"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P3"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
+    table5a[table5aRowDict["Other taxes less subsidies on investment"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P4"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
     table5a[table5aRowDict["Total indirect taxes"], ring] = sum(table5a[table5aTaxes, ring]);
 end
 
@@ -171,11 +172,11 @@ table5b[table5bRowDict["Total change in inventories"],:]);
 
 #table 6
 #importing relevant ASNA data
-ASNAHouseInc = ExcelReaders.readxl("ASNAData"*pathmark*"5204036_Household_Income_Account.xls", "Data1!A1:AN71");
-ASNANonFinInc = ExcelReaders.readxl("ASNAData"*pathmark*"5204017_NonFin_Corp_Income_Account.xls", "Data1!A1:AE71");
-ASNAFinInc = ExcelReaders.readxl("ASNAData"*pathmark*"5204025_Fin_Corp_Income_Account.xls", "Data1!A1:AD71");
-ASNAGovInc = ExcelReaders.readxl("ASNAData"*pathmark*"5204030_GenGov_Income_Account.xls", "Data1!A1:DA71");
-ASNAExtInc = ExcelReaders.readxl("ASNAData"*pathmark*"5204043_External_Accounts.xls", "Data1!A1:AI71");
+ASNAHouseInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204036_Household_Income_Account.xls", "Data1");
+ASNANonFinInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204017_NonFin_Corp_Income_Account.xls", "Data1");
+ASNAFinInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204025_Fin_Corp_Income_Account.xls", "Data1");
+ASNAGovInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204030_GenGov_Income_Account.xls", "Data1");
+ASNAExtInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204043_External_Accounts.xls", "Data1");
 #initialising table
 tableName = ["Households", "Non-Financial Corporations", "Financial Corporations", "General Government", "External", "Total"];
 tableDict = Dict(tableName .=> [1:1:length(tableName);]);
@@ -580,12 +581,121 @@ end;
 optimize!(mod15);
 table15[1:(length(tableName)-1), 1:(length(tableName)-1)] = table15[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
 
-#=table 16
+#table 16a
 #initialising table
-table16aNameRow = ["Net Saving", "Net capital transfers", "Gross fixed capital formation", "Net lending (+) / borrowing (-)"]
+table16aNameRow = ["Net saving ;", "Total net capital transfers ;", "Gross fixed capital formation ;", "Net lending (+) / net borrowing (-) ;"];
+table16aDataCol = [ASNAHouseCap, ASNANonFinCap, ASNAFinCap, ASNAGovCap, ASNAExtInc];
 table16aRowDict = Dict(table16aNameRow .=> [1:1:length(table16aNameRow);]);
+table16aDataDict = Dict(tableName[1:length(tableName)-1] .=> table16aDataCol);
 table16a = zeros(length(table16aNameRow),length(tableName));
-=#
+#filling in values
+for i in tableName
+    if i == "Total"
+        for ring in table16aNameRow
+            table16a[table16aRowDict[ring],tableDict[i]]=sum(table16a[table16aRowDict[ring],:]);
+        end
+    elseif i == "General Government"
+        for ring in table16aNameRow
+            table16a[table16aRowDict[ring],tableDict[i]]=first(table16aDataDict[i][ASNAYearRow,findall(x -> occursin("General government ;  "*ring, x), string.(table16aDataDict[i][1,:]))]);
+        end
+    else
+        for ring in table16aNameRow
+            if isempty(findall(x -> occursin(ring, x), string.(table16aDataDict[i][1,:])))
+                table16a[table16aRowDict[ring],tableDict[i]]=0.0;
+            else
+                table16a[table16aRowDict[ring],tableDict[i]]=first(table16aDataDict[i][ASNAYearRow,findall(x -> occursin(ring, x), string.(table16aDataDict[i][1,:]))]);
+            end
+        end
+    end
+end
+
+#table 16b
+#importing relevant data from ASNA
+#importing relevant ASNA data
+ASNAHouseFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204040_Household_Financial_Account.xls", "Data1");
+ASNANonFinFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204019_NonFin_Corp_Financial_Account.xls", "Data1");
+ASNAFinFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204027_Fin_Corp_Financial_Account.xls", "Data1");
+ASNAGovFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204033_GenGov_Financial_Account.xls", "Data1");
+ASNAExtFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204044_External_Financial_Account.xls", "Data1");
+#initialising table
+table16bNameRow = ["Acquisition of financial assets - Monetary gold and SDRs ;","Acquisition of financial assets - Currency and deposits ;",
+"Acquisition of financial assets - Bills of exchange ;","Acquisition of financial assets - One name paper–issued in Australia ;",
+"Acquisition of financial assets - One name paper–issued offshore ;","Acquisition of financial assets - Bonds etc.–issued in Australia ;",
+"Acquisition of financial assets - Bonds etc.–issued offshore ;","Acquisition of financial assets - Derivatives ;",
+"Acquisition of financial assets - Loans and placements ;","Acquisition of financial assets - Shares and other equity ;",
+"Acquisition of financial assets - Total insurance technical reserves ;","Acquisition of financial assets - Other accounts receivable ;",
+"Incurrence of liabilities - Monetary gold and SDRs ;","Incurrence of liabilities - Currency and deposits ;",
+"Incurrence of liabilities - Bills of exchange ;","Incurrence of liabilities - One name paper–issued in Australia ;",
+"Incurrence of liabilities - One name paper–issued offshore ;","Incurrence of liabilities - Bonds etc.–issued in Australia ;",
+"Incurrence of liabilities - Bonds etc.–issued offshore ;","Incurrence of liabilities - Derivatives ;",
+"Incurrence of liabilities - Loans and placements ;","Incurrence of liabilities - Shares and other equity ;",
+"Incurrence of liabilities - Total insurance technical reserves ;","Incurrence of liabilities - Other accounts payable ;"];
+table16bDataCol = [ASNAHouseFin, ASNANonFinFin, ASNAFinFin, ASNAGovFin, ASNAExtFin];
+table16bRowDict = Dict(table16bNameRow .=> [1:1:length(table16bNameRow);]);
+table16bDataDict = Dict(tableName[1:length(tableName)-1] .=> table16bDataCol);
+table16b = zeros(length(table16bNameRow),length(tableName));
+#filling in values
+for i in tableName
+    if i == "Total"
+        for ring in table16bNameRow
+            table16b[table16bRowDict[ring],tableDict[i]]=sum(table16b[table16bRowDict[ring],:]);
+        end
+    elseif i == "General Government"
+        for ring in table16bNameRow
+            if isempty(findall(x -> occursin("General government - "*ring, x), string.(table16bDataDict[i][1,:])))
+                table16b[table16bRowDict[ring],tableDict[i]]=0.0;
+            else
+                table16b[table16bRowDict[ring],tableDict[i]]=first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin("General government - "*ring, x), string.(table16bDataDict[i][1,:]))]);
+            end
+        end
+    else
+        for ring in table16bNameRow
+            if isempty(findall(x -> occursin(ring, x), string.(table16bDataDict[i][1,:])))
+                table16b[table16bRowDict[ring],tableDict[i]]=0.0;
+            else
+                table16b[table16bRowDict[ring],tableDict[i]]=first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin(ring, x), string.(table16bDataDict[i][1,:]))]);
+            end
+        end
+    end
+end
+
+table16bAqcRow = findall(x -> occursin("Acquisition", x), string.(table16bNameRow));
+table16bLiaRow = findall(x -> occursin("liabilities", x), string.(table16bNameRow));
+table16bAqcTotal = sum(eachrow(table16b[table16bAqcRow,:]));
+table16bLiaTotal = sum(eachrow(table16b[table16bLiaRow,:]));
+table16SurplusOrDeficit = table16bAqcTotal - table16bLiaTotal;
+
+table17TableNames = ["Monetary gold and SDRs ;","Currency and deposits ;","Bills of exchange ;",
+"One name paper–issued in Australia ;","One name paper–issued offshore ;","Bonds etc.–issued in Australia ;",
+"Bonds etc.–issued offshore ;","Derivatives ;","Loans and placements ;","Shares and other equity ;",
+"Total insurance technical reserves ;","Other accounts receivable ;"];
+
+table17_1 = zeros(length(tableName),length(tableName));
+table17_1[length(tableName),:] = table16b[table16bRowDict["Acquisition of financial assets - "*table17TableNames[1]],:];
+table17_1[:,length(tableName)] = table16b[table16bRowDict["Incurrence of liabilities - "*table17TableNames[1]],:];
+mod17 = Model(Ipopt.Optimizer);
+@variable(mod17, x[1:(length(tableName)-1), 1:(length(tableName)-1)]);
+@NLobjective(mod17, Min, sum((x[i,j]) ^ 2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
+for i in 1:(length(tableName)-1);
+    if table17_1[tableDict["Total"],i] == 0
+        for ding in 1:(length(tableName)-1);
+            @constraint(mod17, x[ding,i] == 0);
+        end
+    else
+        @constraint(mod17, sum(x[:,i]) == table17_1[tableDict["Total"],i]-sum(table17_1[1:(length(tableName)-1),i]));   
+    end
+    if table17_1[i,tableDict["Total"]] == 0
+        for ding in 1:(length(tableName)-1);
+            @constraint(mod17, x[i,ding] == 0);
+        end
+    else
+        @constraint(mod17, sum(x[i,:]) == table17_1[i,tableDict["Total"]]-sum(table17_1[i,1:(length(tableName)-1)]));
+    end
+end;
+@constraint(mod17, x[tableDict["External"],tableDict["External"]] == 0);
+optimize!(mod15);
+
+
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
@@ -627,5 +737,5 @@ D = df2dict(df, :IOCode, :x3)
 =#
 
 #notes
-#double check for missing accounts i.e. they said 0 for 96-97 so they were made to be 0 for this year, but may not be in actuality
-#also check for other missing accounts, confusingly labelled so skipped over etc.
+#double check for missing accounts i.e. they said 0 for 96-97 so they were made to be 0 for this year, but may not be in other years
+#also check for other missing accounts, confusingly labelled so skipped over etc
