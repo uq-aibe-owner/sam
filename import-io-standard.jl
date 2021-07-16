@@ -96,14 +96,12 @@ table5a[table5aRowDict["Total fixed capital expenditure"], table5aColDict["Non-F
 table5a[table5aRowDict["Total fixed capital expenditure"], table5aColDict["Financial Corporations"]] = first(ASNAFinCap[ASNAYearRow, ASNAFinCapTotCapForm]);
 table5a[table5aRowDict["Total fixed capital expenditure"], table5aColDict["General Government"]] = first(ASNAGovCap[ASNAYearRow, ASNAGenGovCapTotCapForm]);
 
-#filling in non-total values
-for ring in [1:1:length(table5aColDict)-1;];
-    table5a[table5aRowDict["Domestic Commodities"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["T1"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
-    table5a[table5aRowDict["Imported Commodities, complementary"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P5"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
-    table5a[table5aRowDict["Imported Commodities, competing"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P6"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
-    table5a[table5aRowDict["Taxes less subsidies on products"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P3"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
-    table5a[table5aRowDict["Other taxes less subsidies on investment"],ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*IO[IORowDict["P4"],IOCapForm[1]] / IO[IORowDict["T2"],IOCapForm[1]];
-    table5a[table5aRowDict["Total indirect taxes"], ring] = sum(table5a[table5aTaxes, ring]);
+#filling in non-total values note- i think its including the taxes subtotal in the distribution
+for i in [1:1:length(table5aRowDict)-1;];
+    for ring in [1:1:length(table5aColDict)-1;];
+        table5a[i,ring] = table5a[table5aRowDict["Total fixed capital expenditure"],ring]*table5a[i,table5aColDict["Total"]] / table5a[length(table5aRowDict),length(table5aColDict)];
+        table5a[table5aRowDict["Total indirect taxes"], ring] = sum(table5a[table5aTaxes, ring]);
+    end
 end
 
 #creating table 5b - allocation of investment expenditure (broken into subsections for dict referencing purposes)
@@ -583,7 +581,7 @@ table15[1:(length(tableName)-1), 1:(length(tableName)-1)] = table15[1:(length(ta
 
 #table 16a
 #initialising table
-table16aNameRow = ["Net saving ;", "Total net capital transfers ;", "Gross fixed capital formation ;", "Net lending (+) / net borrowing (-) ;"];
+table16aNameRow = ["Netsaving;", "Totalnetcapitaltransfers;", "Grossfixedcapitalformation;", "Netlending(+)/netborrowing(-);"];
 table16aDataCol = [ASNAHouseCap, ASNANonFinCap, ASNAFinCap, ASNAGovCap, ASNAExtInc];
 table16aRowDict = Dict(table16aNameRow .=> [1:1:length(table16aNameRow);]);
 table16aDataDict = Dict(tableName[1:length(tableName)-1] .=> table16aDataCol);
@@ -596,14 +594,14 @@ for i in tableName
         end
     elseif i == "General Government"
         for ring in table16aNameRow
-            table16a[table16aRowDict[ring],tableDict[i]]=first(table16aDataDict[i][ASNAYearRow,findall(x -> occursin("General government ;  "*ring, x), string.(table16aDataDict[i][1,:]))]);
+            table16a[table16aRowDict[ring],tableDict[i]]=first(table16aDataDict[i][ASNAYearRow,findall(x -> occursin("Generalgovernment;"*ring, x), filter.(x -> !isspace(x), string.(table16aDataDict[i][1,:])))]);
         end
     else
         for ring in table16aNameRow
-            if isempty(findall(x -> occursin(ring, x), string.(table16aDataDict[i][1,:])))
+            if isempty(findall(x -> occursin(ring, x), filter.(x -> !isspace(x),string.(table16aDataDict[i][1,:]))))
                 table16a[table16aRowDict[ring],tableDict[i]]=0.0;
             else
-                table16a[table16aRowDict[ring],tableDict[i]]=first(table16aDataDict[i][ASNAYearRow,findall(x -> occursin(ring, x), string.(table16aDataDict[i][1,:]))]);
+                table16a[table16aRowDict[ring],tableDict[i]]=first(table16aDataDict[i][ASNAYearRow,findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(table16aDataDict[i][1,:])))]);
             end
         end
     end
@@ -618,18 +616,19 @@ ASNAFinFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204027_Fin_Corp_Fina
 ASNAGovFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204033_GenGov_Financial_Account.xls", "Data1");
 ASNAExtFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204044_External_Financial_Account.xls", "Data1");
 #initialising table
-table16bNameRow = ["Acquisition of financial assets - Monetary gold and SDRs ;","Acquisition of financial assets - Currency and deposits ;",
-"Acquisition of financial assets - Bills of exchange ;","Acquisition of financial assets - One name paper–issued in Australia ;",
-"Acquisition of financial assets - One name paper–issued offshore ;","Acquisition of financial assets - Bonds etc.–issued in Australia ;",
-"Acquisition of financial assets - Bonds etc.–issued offshore ;","Acquisition of financial assets - Derivatives ;",
-"Acquisition of financial assets - Loans and placements ;","Acquisition of financial assets - Shares and other equity ;",
-"Acquisition of financial assets - Total insurance technical reserves ;","Acquisition of financial assets - Other accounts receivable ;",
-"Incurrence of liabilities - Monetary gold and SDRs ;","Incurrence of liabilities - Currency and deposits ;",
-"Incurrence of liabilities - Bills of exchange ;","Incurrence of liabilities - One name paper–issued in Australia ;",
-"Incurrence of liabilities - One name paper–issued offshore ;","Incurrence of liabilities - Bonds etc.–issued in Australia ;",
-"Incurrence of liabilities - Bonds etc.–issued offshore ;","Incurrence of liabilities - Derivatives ;",
-"Incurrence of liabilities - Loans and placements ;","Incurrence of liabilities - Shares and other equity ;",
-"Incurrence of liabilities - Total insurance technical reserves ;","Incurrence of liabilities - Other accounts payable ;"];
+#make no spaces
+table16bNameRow = ["Acquisitionoffinancialassets-MonetarygoldandSDRs;","Acquisitionoffinancialassets-Currencyanddeposits;",
+"Acquisitionoffinancialassets-Billsofexchange;","Acquisitionoffinancialassets-Onenamepaper–issuedinAustralia;",
+"Acquisitionoffinancialassets-Onenamepaper–issuedoffshore;","Acquisitionoffinancialassets-Bondsetc.–issuedinAustralia;",
+"Acquisitionoffinancialassets-Bondsetc.–issuedoffshore;","Acquisitionoffinancialassets-Derivatives;",
+"Acquisitionoffinancialassets-Loansandplacements;","Acquisitionoffinancialassets-Sharesandotherequity;",
+"Acquisitionoffinancialassets-Totalinsurancetechnicalreserves;","Acquisitionoffinancialassets-Otheraccounts",
+"Incurrenceofliabilities-MonetarygoldandSDRs;","Incurrenceofliabilities-Currencyanddeposits;",
+"Incurrenceofliabilities-Billsofexchange;","Incurrenceofliabilities-Onenamepaper–issuedinAustralia;",
+"Incurrenceofliabilities-Onenamepaper–issuedoffshore;","Incurrenceofliabilities-Bondsetc.–issuedinAustralia;",
+"Incurrenceofliabilities-Bondsetc.–issuedoffshore;","Incurrenceofliabilities-Derivatives;",
+"Incurrenceofliabilities-Loansandplacements;","Incurrenceofliabilities-Sharesandotherequity;",
+"Incurrenceofliabilities-Totalinsurancetechnicalreserves;","Incurrenceofliabilities-Otheraccounts"];
 table16bDataCol = [ASNAHouseFin, ASNANonFinFin, ASNAFinFin, ASNAGovFin, ASNAExtFin];
 table16bRowDict = Dict(table16bNameRow .=> [1:1:length(table16bNameRow);]);
 table16bDataDict = Dict(tableName[1:length(tableName)-1] .=> table16bDataCol);
@@ -642,18 +641,31 @@ for i in tableName
         end
     elseif i == "General Government"
         for ring in table16bNameRow
-            if isempty(findall(x -> occursin("General government - "*ring, x), string.(table16bDataDict[i][1,:])))
+            if isempty(findall(x -> occursin("Generalgovernment-"*ring, x), filter.(x -> !isspace(x), string.(table16bDataDict[i][1,:]))))
                 table16b[table16bRowDict[ring],tableDict[i]]=0.0;
             else
-                table16b[table16bRowDict[ring],tableDict[i]]=first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin("General government - "*ring, x), string.(table16bDataDict[i][1,:]))]);
+                table16b[table16bRowDict[ring],tableDict[i]]=1000*first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin("Generalgovernment-"*ring, x), filter.(x -> !isspace(x), string.(table16bDataDict[i][1,:])))]);
+            end
+        end
+    elseif i == "External"
+        for ring in table16bNameRow
+            key = ring
+            if occursin("liabilities",ring) && occursin("issuedoffshore",ring)
+                ring = replace(ring,"–issuedoffshore" => "")
+            else
+            end
+            if isempty(findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(table16bDataDict[i][1,:]))))
+                table16b[table16bRowDict[key],tableDict[i]]=0.0;
+            else
+                table16b[table16bRowDict[key],tableDict[i]]=1000*first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(table16bDataDict[i][1,:])))]);
             end
         end
     else
         for ring in table16bNameRow
-            if isempty(findall(x -> occursin(ring, x), string.(table16bDataDict[i][1,:])))
+            if isempty(findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(table16bDataDict[i][1,:]))))
                 table16b[table16bRowDict[ring],tableDict[i]]=0.0;
             else
-                table16b[table16bRowDict[ring],tableDict[i]]=first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin(ring, x), string.(table16bDataDict[i][1,:]))]);
+                table16b[table16bRowDict[ring],tableDict[i]]=1000*first(table16bDataDict[i][findall(x -> occursin("2019", x), string.(table16bDataDict[i][:,1])),findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(table16bDataDict[i][1,:])))]);
             end
         end
     end
@@ -665,35 +677,130 @@ table16bAqcTotal = sum(eachrow(table16b[table16bAqcRow,:]));
 table16bLiaTotal = sum(eachrow(table16b[table16bLiaRow,:]));
 table16SurplusOrDeficit = table16bAqcTotal - table16bLiaTotal;
 
-table17TableNames = ["Monetary gold and SDRs ;","Currency and deposits ;","Bills of exchange ;",
-"One name paper–issued in Australia ;","One name paper–issued offshore ;","Bonds etc.–issued in Australia ;",
-"Bonds etc.–issued offshore ;","Derivatives ;","Loans and placements ;","Shares and other equity ;",
-"Total insurance technical reserves ;","Other accounts receivable ;"];
+#initialising table
+#make no spaces
+eAndONameRow = ["Neterrorsandomissions;"];
+eAndODataCol = [ASNAHouseFin, ASNANonFinFin, ASNAFinFin, ASNAGovFin, ASNAExtFin];
+eAndORowDict = Dict(eAndONameRow .=> [1:1:length(eAndONameRow);]);
+eAndODataDict = Dict(tableName[1:length(tableName)-1] .=> eAndODataCol);
+eAndO = zeros(length(eAndONameRow),length(tableName));
+#filling in values
+for i in tableName
+    if i == "Total"
+        for ring in eAndONameRow
+            eAndO[eAndORowDict[ring],tableDict[i]]=sum(eAndO[eAndORowDict[ring],:]);
+        end
+    elseif i == "General Government"
+        for ring in eAndONameRow
+            if isempty(findall(x -> occursin("Generalgovernment-"*ring, x), filter.(x -> !isspace(x), string.(eAndODataDict[i][1,:]))))
+                eAndO[eAndORowDict[ring],tableDict[i]]=0.0;
+            else
+                eAndO[eAndORowDict[ring],tableDict[i]]=1000*first(eAndODataDict[i][findall(x -> occursin("2019", x), string.(eAndODataDict[i][:,1])),findall(x -> occursin("Generalgovernment-"*ring, x), filter.(x -> !isspace(x), string.(eAndODataDict[i][1,:])))]);
+            end
+        end
+    else
+        for ring in eAndONameRow
+            if isempty(findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(eAndODataDict[i][1,:]))))
+                eAndO[eAndORowDict[ring],tableDict[i]]=0.0;
+            else
+                eAndO[eAndORowDict[ring],tableDict[i]]=1000*first(eAndODataDict[i][findall(x -> occursin("2019", x), string.(eAndODataDict[i][:,1])),findall(x -> occursin(ring, x), filter.(x -> !isspace(x), string.(eAndODataDict[i][1,:])))]);
+            end
+        end
+    end
+end
 
-table17_1 = zeros(length(tableName),length(tableName));
-table17_1[length(tableName),:] = table16b[table16bRowDict["Acquisition of financial assets - "*table17TableNames[1]],:];
-table17_1[:,length(tableName)] = table16b[table16bRowDict["Incurrence of liabilities - "*table17TableNames[1]],:];
-mod17 = Model(Ipopt.Optimizer);
-@variable(mod17, x[1:(length(tableName)-1), 1:(length(tableName)-1)]);
-@NLobjective(mod17, Min, sum((x[i,j]) ^ 2 for i in 1:(length(tableName)-1), j in 1:(length(tableName)-1)));
-for i in 1:(length(tableName)-1);
-    if table17_1[tableDict["Total"],i] == 0
-        for ding in 1:(length(tableName)-1);
-            @constraint(mod17, x[ding,i] == 0);
-        end
-    else
-        @constraint(mod17, sum(x[:,i]) == table17_1[tableDict["Total"],i]-sum(table17_1[1:(length(tableName)-1),i]));   
+table17TableNames = ["MonetarygoldandSDRs;","Currencyanddeposits;","Billsofexchange;",
+"Onenamepaper–issuedinAustralia;","Onenamepaper–issuedoffshore;","Bondsetc.–issuedinAustralia;",
+"Bondsetc.–issuedoffshore;","Derivatives;","Loansandplacements;","Sharesandotherequity;",
+"Totalinsurancetechnicalreserves;","Otheraccounts"];
+
+function myfind(c)
+    a = similar(c, Int)
+    count = 1
+    @inbounds for i in eachindex(c)
+        a[count] = i
+        count += (c[i] != zero(eltype(c)))
     end
-    if table17_1[i,tableDict["Total"]] == 0
-        for ding in 1:(length(tableName)-1);
-            @constraint(mod17, x[i,ding] == 0);
-        end
+    return resize!(a, count-1)
+end
+
+table17=Vector{Union{Matrix{Float64}, Nothing}}(undef, length(table17TableNames));
+for ring in [1:1:length(table17TableNames);]
+    println("this round is number ", ring)
+    table17[ring] = zeros(length(tableName),length(tableName));
+    table17[ring][length(tableName),:] = table16b[table16bRowDict["Acquisitionoffinancialassets-"*table17TableNames[ring]],:];
+    table17[ring][:,length(tableName)] = table16b[table16bRowDict["Incurrenceofliabilities-"*table17TableNames[ring]],:];
+    if sum(table17[ring][length(tableName),1:(length(tableName)-1)]) == sum(table17[ring][1:(length(tableName)-1),length(tableName)])
     else
-        @constraint(mod17, sum(x[i,:]) == table17_1[i,tableDict["Total"]]-sum(table17_1[i,1:(length(tableName)-1)]));
+        table17RowTot = sum(table17[ring][length(tableName),1:(length(tableName)-1)]);
+        table17ColTot = sum(table17[ring][1:(length(tableName)-1),length(tableName)]);
+        table17TotAv = (table17RowTot + table17ColTot)/2;
+        if 0.98*abs(table17RowTot)<abs(table17TotAv)<1.04*abs(table17RowTot)
+        else
+            error("Large discrepancy in row and collumn total sums in table 17."*string(ring))
+        end
+        table17[ring][length(tableName),length(tableName)] = table17TotAv;
+        for i in 1:(length(tableName)-1);
+            table17[ring][length(tableName),i] = table17[ring][length(tableName),i]*table17TotAv/table17RowTot;
+            table17[ring][i,length(tableName)] = table17[ring][i,length(tableName)]*table17TotAv/table17ColTot;
+        end
     end
-end;
-@constraint(mod17, x[tableDict["External"],tableDict["External"]] == 0);
-optimize!(mod15);
+    nonZerosRow = myfind(table17[ring][:,length(tableName)]);
+    nonZerosCol = myfind(table17[ring][length(tableName),:]);
+    if length(nonZerosRow)-1 == 1;
+        table17[ring][nonZerosRow[1],nonZerosCol] = table17[ring][tableDict["Total"],nonZerosCol];
+    elseif length(nonZerosCol)-1 == 1;
+        table17[ring][nonZerosRow,nonZerosCol[1]] = table17[ring][nonZerosRow,tableDict["Total"]];
+    else
+        mod17 = Model(Ipopt.Optimizer);
+        @variable(mod17, x[1:(length(nonZerosRow)-1), 1:(length(nonZerosCol)-1)]);
+        @NLobjective(mod17, Min, sum((x[i,j]) ^ 2 for i in 1:(length(nonZerosRow)-1), j in 1:(length(nonZerosCol)-1)));
+        for i in 1:length(nonZerosRow)-1;
+            @constraint(mod17, sum(x[i,:]) == table17[ring][nonZerosRow[i],tableDict["Total"]]);
+        end
+        for i in 1:(length(nonZerosCol)-1);
+            @constraint(mod17, sum(x[:,i]) == table17[ring][tableDict["Total"],nonZerosCol[i]]);
+        end
+        if tableDict["External"] in nonZerosRow && tableDict["External"] in nonZerosCol
+            @constraint(mod17, x[length(nonZerosRow)-1,length(nonZerosCol)-1] == 0);
+        else
+        end
+        optimize!(mod17);
+        table17[ring][nonZerosRow[1:length(nonZerosRow)-1], nonZerosCol[1:length(nonZerosCol)-1]] = value.(x);
+    end
+end
+
+table19 = sum(table17[:]);
+table19TotRow = table19[:,tableDict["Total"]]+table16a[table16aRowDict["Netlending(+)/netborrowing(-);"],:];
+table19EAndO = table19[tableDict["Total"],:]-table19TotRow;
+
+#final bits and pieces to fill in gaps
+ASNAIncomeFromGDP = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204006_Income_from_GDP.xls", "Data1");
+productionToHouseholds = (first(ASNAIncomeFromGDP[findall(x -> occursin("2019", x), string.(ASNAIncomeFromGDP[:,1])),findall(x -> occursin("Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAIncomeFromGDP[1,:])))])
+-first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("receivable-Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))])
++first(ASNAIncomeFromGDP[findall(x -> occursin("2019", x), string.(ASNAIncomeFromGDP[:,1])),findall(x -> occursin("Dwellingsownedbypersons;Grossoperatingsurplus;", x), filter.(x -> !isspace(x), string.(ASNAIncomeFromGDP[1,:])))])
++first(ASNAIncomeFromGDP[findall(x -> occursin("2019", x), string.(ASNAIncomeFromGDP[:,1])),findall(x -> occursin("Grossmixedincome;", x), filter.(x -> !isspace(x), string.(ASNAIncomeFromGDP[1,:])))]));
+
+#current to current transfers
+currentToCurrent = transpose(table6 + table7 + table8 + table9 + table10 + table11 + table12 + table13);
+
+
+samName = ["Production Activities", "Factors of Production", "Households Current Account", "Non-Financial Corporations Current Account",
+"Financial Corporations Current Account", "Government Current Account", "Foreigners Current Account",
+"Households Capital Account", "Non-Financial Corporations Capital Account", "Financial Corporations Capital Account",
+"Government Capital Account", "Foreigners Capital Account", "Net Errors and Ommisions", "Total"];
+samDict = Dict(samName .=> [1:1:length(samName);]);
+sam = zeros(length(samName),length(samName));
+sam[samDict["Production Activities"],samDict["Production Activities"]] = IO[IORowDict["T1"],IOColDict["T4"]];
+sam[samDict["Production Activities"],samDict["Households Current Account"]] = IO[IORowDict["T1"],IOColDict["Q1"]];
+sam[samDict["Production Activities"],samDict["Government Current Account"]] = IO[IORowDict["T1"],IOColDict["Q2"]];
+sam[samDict["Production Activities"],samDict["Foreigners Current Account"]] = IO[IORowDict["T1"],IOColDict["Q7"]];
+(sam[samDict["Production Activities"],[samDict["Households Capital Account"],samDict["Non-Financial Corporations Capital Account"],
+samDict["Financial Corporations Capital Account"],samDict["Government Capital Account"]]]) = (table5c[table5cRowDict["Domestic Commodities"],
+[table5cColDict["Households"],table5cColDict["Non-Financial Corporations"],table5cColDict["Financial Corporations"],table5cColDict["General Government"]]]);
+sam[samDict["Factors of Production"], samDict["Production Activities"]] = sum(IO[IORowDict["P1"]:IORowDict["P2"],IOColDict["T4"]]);
+sam[samDict["Households Current Account"], samDict["Production Activities"]] = productionToHouseholds;
+sam[samDict["Households Current Account"], samDict["Households Current Account"]] = table13[tableDict["Households"],tableDict["Households"]];
 
 
 #=convert dataframe to dictionary
@@ -739,3 +846,7 @@ D = df2dict(df, :IOCode, :x3)
 #notes
 #double check for missing accounts i.e. they said 0 for 96-97 so they were made to be 0 for this year, but may not be in other years
 #also check for other missing accounts, confusingly labelled so skipped over etc
+#implement looop and more ras-ing
+#take out spaces in all find functions
+#generalise the ASNAYearRow to just search every time
+#rename tables from numbers to abbreviations
