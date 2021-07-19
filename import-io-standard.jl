@@ -782,7 +782,20 @@ productionToHouseholds = (first(ASNAIncomeFromGDP[findall(x -> occursin("2019", 
 +first(ASNAIncomeFromGDP[findall(x -> occursin("2019", x), string.(ASNAIncomeFromGDP[:,1])),findall(x -> occursin("Grossmixedincome;", x), filter.(x -> !isspace(x), string.(ASNAIncomeFromGDP[1,:])))]));
 
 #current to current transfers
+#from households
 currentToCurrent = transpose(table6 + table7 + table8 + table9 + table10 + table11 + table12 + table13);
+currentToCurrent[tableDict["General Government"],tableDict["Households"]] = (currentToCurrent[tableDict["General Government"],tableDict["Households"]] + first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("payable-Incometax;", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))])
++ first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("payable-Othercurrenttaxes", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))]) + IO[IORowDict["P3"], IOColDict["Q1"]]);
+currentToCurrent[tableDict["External"],tableDict["Households"]] = currentToCurrent[tableDict["External"],tableDict["Households"]] + sum(IO[IORowDict["P5"]:IORowDict["P6"],IOColDict["Q1"]]);
+#from non-financial
+currentToCurrent[tableDict["General Government"],tableDict["Non-Financial Corporations"]] = currentToCurrent[tableDict["General Government"],tableDict["Non-Financial Corporations"]] + first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Secondaryincomepayable-Currenttaxesonincome,wealth,etc-Total;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))]);
+#from financial
+currentToCurrent[tableDict["General Government"],tableDict["Financial Corporations"]] = currentToCurrent[tableDict["General Government"],tableDict["Financial Corporations"]] + first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Secondaryincomepayable-Currenttaxesonincome,wealth,etc-Total;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))]);
+#from general Government
+currentToCurrent[tableDict["External"],tableDict["General Government"]] = currentToCurrent[tableDict["External"],tableDict["General Government"]] + sum(IO[IORowDict["P5"]:IORowDict["P6"],IOColDict["Q2"]]);
+#from external 
+currentToCurrent[tableDict["General Government"],tableDict["External"]] = currentToCurrent[tableDict["General Government"],tableDict["External"]] + sum(IO[IORowDict["P3"],IOColDict["Q2"]]) + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Currenttaxesonincome,wealth,etc;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
+currentToCurrent[tableDict["Households"],tableDict["External"]] = currentToCurrent[tableDict["Households"],tableDict["External"]] + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
 
 
 samName = ["Production Activities", "Factors of Production", "Households Current Account", "Non-Financial Corporations Current Account",
@@ -795,12 +808,21 @@ sam[samDict["Production Activities"],samDict["Production Activities"]] = IO[IORo
 sam[samDict["Production Activities"],samDict["Households Current Account"]] = IO[IORowDict["T1"],IOColDict["Q1"]];
 sam[samDict["Production Activities"],samDict["Government Current Account"]] = IO[IORowDict["T1"],IOColDict["Q2"]];
 sam[samDict["Production Activities"],samDict["Foreigners Current Account"]] = IO[IORowDict["T1"],IOColDict["Q7"]];
-(sam[samDict["Production Activities"],[samDict["Households Capital Account"],samDict["Non-Financial Corporations Capital Account"],
-samDict["Financial Corporations Capital Account"],samDict["Government Capital Account"]]]) = (table5c[table5cRowDict["Domestic Commodities"],
-[table5cColDict["Households"],table5cColDict["Non-Financial Corporations"],table5cColDict["Financial Corporations"],table5cColDict["General Government"]]]);
+sam[samDict["Production Activities"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Domestic Commodities"],table5cColDict["Households"]:table5cColDict["General Government"]];
 sam[samDict["Factors of Production"], samDict["Production Activities"]] = sum(IO[IORowDict["P1"]:IORowDict["P2"],IOColDict["T4"]]);
-sam[samDict["Households Current Account"], samDict["Production Activities"]] = productionToHouseholds;
-sam[samDict["Households Current Account"], samDict["Households Current Account"]] = table13[tableDict["Households"],tableDict["Households"]];
+sam[samDict["Households Current Account"], samDict["Factors of Production"]] = productionToHouseholds;
+sam[samDict["Non-Financial Corporations Current Account"], samDict["Factors of Production"]] = first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Grossoperatingsurplus;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))]);
+sam[samDict["Financial Corporations Current Account"], samDict["Factors of Production"]] = first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Grossoperatingsurplus;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))]);
+sam[samDict["Government Current Account"], samDict["Factors of Production"]] = first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))]);
+sam[samDict["Foreigners Current Account"], samDict["Factors of Production"]] = first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("receivable-Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
+sam[samDict["Government Current Account"], samDict["Production Activities"]] = sum(IO[IORowDict["P3"]:IORowDict["P4"],IOColDict["T4"]]);
+sam[samDict["Foreigners Current Account"], samDict["Production Activities"]] = sum(IO[IORowDict["P5"]:IORowDict["P6"],IOColDict["T4"]]);
+sam[samDict["Households Current Account"]:samDict["Foreigners Current Account"],samDict["Households Current Account"]:samDict["Foreigners Current Account"]]=currentToCurrent[1:length(tableName)-1,1:length(tableName)-1];
+sam[samDict["Households Current Account"], samDict["Households Current Account"]] = first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("Finalconsumptionexpenditure;", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))])+first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))]);
+sam[samDict["Non-Financial Corporations Current Account"], samDict["Non-Financial Corporations Current Account"]] = first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))])+first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))]);
+sam[samDict["Financial Corporations Current Account"], samDict["Financial Corporations Current Account"]] = first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))])+first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))]);
+sam[samDict["Government Current Account"], samDict["Government Current Account"]] = first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Finalconsumptionexpenditure;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))])+first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))]);
+sam[samDict["Foreigners Current Account"], samDict["Foreigners Current Account"]] = first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("Balanceonexternalincomeaccount;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
 
 
 #=convert dataframe to dictionary
