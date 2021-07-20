@@ -23,19 +23,19 @@ SAM[length(intermediaryRow) + 1 : length(intermediaryCol) + length(factorRow), i
 IOCode = append!(string.(IO[1, intermediaryCol]), string.(IO[factorRow, 1]), string.(IO[3,finalDemandCol]), string.(["Total"]));
 IOName = append!(string.(IO[2, intermediaryCol]), string.(IO[factorRow, 2]), string.(IO[2,finalDemandCol]), string.(["Total"]));
 #=code to sum all investment final demand into one column, comment out if not needed
-#convert to dataframe, make 1st cap formation column into the sum collumn, delete other collumns, delete other rows
+#convert to dataframe, make 1st cap formation column into the sum column, delete other columns, delete other rows
 investment = findall(x -> occursin("Capital Formation", x), string.(IO[2,:]));
 SAM = DataFrame(SAM, :auto);
 names!(SAM, Symbol.(IOCode));
 SAM[:,investment[1]]=sum(eachcol(SAM[:,investment]));
 SAM = SAM[Not(investment[Not(investment[1])]),Not(investment[Not(investment[1])])];
-#alter title vectors accordingly (include Q in total investment collumn in IOcode)
+#alter title vectors accordingly (include Q in total investment column in IOcode)
 IOCode[investment[1]]
 IOCode = IOCode[Not(investment[Not(investment[1])])];
 IONames = IONames[Not(investment[Not(investment[1])])];
 #convert back to matrix
 =#
-#combining capital formation collumns into relevant collumns - dynamic kinda stuff, leave for another time
+#combining capital formation columns into relevant columns - dynamic kinda stuff, leave for another time
 #=
 #lambdaPub is the government owned share of public corporations (min 0.5)
 #lambdaPriv is the government owned share of private corporations (max 0.5)
@@ -58,7 +58,7 @@ df[!, "HOH"]=HOH
 =#
 
 #SAM = SAM[Not(investment[Not(investment[1])]),Not(investment[Not(investment[1])])];
-#alter title vectors accordingly (include Q in total investment collumn in IOcode)
+#alter title vectors accordingly (include Q in total investment column in IOcode)
 IOCode = IOCode[Not(investment[Not(investment[1])])];
 IONames = IONames[Not(investment[Not(investment[1])])];
 #creating vectors for groups within SAM
