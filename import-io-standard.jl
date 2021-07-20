@@ -14,7 +14,7 @@ using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt;
 IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
 
 #filepath cross system compatability code
-if Sys.KERNEL === :NT || kern === :Windows
+if Sys.KERNEL === :NT || Sys.KERNEL === :Windows
     pathmark = "\\"
 else
     pathmark = "/"
