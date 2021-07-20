@@ -210,7 +210,7 @@ table6[tableDict["General Government"], tableDict["Households"]] = first(ASNAGov
 #solve for missing values with scaling
 table6Step3 = zeros(length(tableName),length(tableName));
 table6Step3Row = [tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["General Government"]];
-table6Step3Col = [tableDict["External"]];
+table6Step3Col = [tableDict["Households"],tableDict["External"]];
 for i in table6Step3Col;
     for ring in table6Step3Row;
         table6Step3[ring,i] = (table6[tableDict["Total"],i]-sum(table6[1:(length(tableName)-1),i]))*(
@@ -222,7 +222,7 @@ table6 = table6+table6Step3;
 
 table6Step4 = zeros(length(tableName),length(tableName));
 table6Step4Row = [1:1:(length(tableName)-1);];
-table6Step4Col = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"]];
+table6Step4Col = [tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"]];
 for i in table6Step4Col;
     for ring in table6Step4Row;
         table6Step4[ring,i] = (table6[tableDict["Total"],i]-sum(table6[1:(length(tableName)-1),i]))*(
@@ -470,7 +470,7 @@ end
 
 #filling in empty values
 table13Step3 = zeros(length(tableName),length(tableName));
-table13Step3Row = [tableDict["Non-Financial Corporations"],tableDict["External"]];
+table13Step3Row = [tableDict["Non-Financial Corporations"],[tableDict["Financial Corporations"],tableDict["General Government"],tableDict["External"]];
 table13Step3Col = [tableDict["General Government"]];
 for i in table13Step3Col;
     for ring in table13Step3Row;
@@ -797,6 +797,10 @@ currentToCurrent[tableDict["External"],tableDict["General Government"]] = curren
 currentToCurrent[tableDict["General Government"],tableDict["External"]] = currentToCurrent[tableDict["General Government"],tableDict["External"]] + sum(IO[IORowDict["P3"],IOColDict["Q2"]]) + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Currenttaxesonincome,wealth,etc;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
 currentToCurrent[tableDict["Households"],tableDict["External"]] = currentToCurrent[tableDict["Households"],tableDict["External"]] + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
 
+#capital to capital transfers
+capitalToCapital = table14 + table15 + table19
+
+ASNAConsFixCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204047_Cons_Fixed_Capital_By_Industry.xls", "Data1");
 
 samName = ["Production Activities", "Factors of Production", "Households Current Account", "Non-Financial Corporations Current Account",
 "Financial Corporations Current Account", "Government Current Account", "Foreigners Current Account",
@@ -818,13 +822,24 @@ sam[samDict["Foreigners Current Account"], samDict["Factors of Production"]] = f
 sam[samDict["Government Current Account"], samDict["Production Activities"]] = sum(IO[IORowDict["P3"]:IORowDict["P4"],IOColDict["T4"]]);
 sam[samDict["Foreigners Current Account"], samDict["Production Activities"]] = sum(IO[IORowDict["P5"]:IORowDict["P6"],IOColDict["T4"]]);
 sam[samDict["Households Current Account"]:samDict["Foreigners Current Account"],samDict["Households Current Account"]:samDict["Foreigners Current Account"]]=currentToCurrent[1:length(tableName)-1,1:length(tableName)-1];
-sam[samDict["Households Current Account"], samDict["Households Current Account"]] = first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("Finalconsumptionexpenditure;", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))])+first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))]);
-sam[samDict["Non-Financial Corporations Current Account"], samDict["Non-Financial Corporations Current Account"]] = first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))])+first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))]);
-sam[samDict["Financial Corporations Current Account"], samDict["Financial Corporations Current Account"]] = first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))])+first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))]);
-sam[samDict["Government Current Account"], samDict["Government Current Account"]] = first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Finalconsumptionexpenditure;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))])+first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))]);
-sam[samDict["Foreigners Current Account"], samDict["Foreigners Current Account"]] = first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("Balanceonexternalincomeaccount;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
+sam[samDict["Households Capital Account"], samDict["Households Current Account"]] = (first(ASNAHouseInc[findall(x -> occursin("2019", x), string.(ASNAHouseInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAHouseInc[1,:])))])
++first(ASNAConsFixCap[findall(x -> occursin("2019", x), string.(ASNAConsFixCap[:,1])),findall(x -> occursin("Households;Dwellingsownedbypersons;", x), filter.(x -> !isspace(x), string.(ASNAConsFixCap[1,:])))])
++first(ASNAConsFixCap[findall(x -> occursin("2019", x), string.(ASNAConsFixCap[:,1])),findall(x -> occursin("Households;Other;", x), filter.(x -> !isspace(x), string.(ASNAConsFixCap[1,:])))]));
+sam[samDict["Non-Financial Corporations Capital Account"], samDict["Non-Financial Corporations Current Account"]] = first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))])+first(ASNANonFinInc[findall(x -> occursin("2019", x), string.(ASNANonFinInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNANonFinInc[1,:])))]);
+sam[samDict["Financial Corporations Capital Account"], samDict["Financial Corporations Current Account"]] = first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))])+first(ASNAFinInc[findall(x -> occursin("2019", x), string.(ASNAFinInc[:,1])),findall(x -> occursin("Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAFinInc[1,:])))]);
+sam[samDict["Government Capital Account"], samDict["Government Current Account"]] = first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Consumptionoffixedcapital;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))])+first(ASNAGovInc[findall(x -> occursin("2019", x), string.(ASNAGovInc[:,1])),findall(x -> occursin("Generalgovernment;Netsaving;", x), filter.(x -> !isspace(x), string.(ASNAGovInc[1,:])))]);
+sam[samDict["Foreigners Capital Account"], samDict["Foreigners Current Account"]] = first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("Balanceonexternalincomeaccount;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
 
+sam[samDict["Households Capital Account"]:samDict["Foreigners Capital Account"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]]= capitalToCapital[1:length(tableDict)-1,1:length(tableDict)-1];
+sam[samDict["Government Current Account"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Taxes less subsidies on products"],1:length(table5cNameCol)-1] + table5c[table5cRowDict["Other taxes less subsidies on investment"],1:length(table5cNameCol)-1];
+sam[samDict["Foreigners Current Account"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Imported Commodities"],1:length(table5cNameCol)-1];
+sam[samDict["Net Errors and Ommisions"],samDict["Production Activities"]] =  table19EAndO[tableDict["Total"]];
+sam[samDict["Net Errors and Ommisions"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]] = -1 .* table19EAndO[1:length(tableName)-1];
 
+for i in 1:length(samName)-1
+    sam[i,samDict["Total"]]=sum(sam[i,:]);
+    sam[samDict["Total"],i]=sum(sam[:,i]);
+end
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
@@ -868,7 +883,7 @@ D = df2dict(df, :IOCode, :x3)
 #notes
 #double check for missing accounts i.e. they said 0 for 96-97 so they were made to be 0 for this year, but may not be in other years
 #also check for other missing accounts, confusingly labelled so skipped over etc
-#implement looop and more ras-ing
+#implement loop and more ras-ing
 #take out spaces in all find functions
 #generalise the ASNAYearRow to just search every time
 #rename tables from numbers to abbreviations
