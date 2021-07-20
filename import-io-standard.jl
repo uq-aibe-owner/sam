@@ -487,7 +487,7 @@ table13 = table13+table13Step3;
 
 table13Step3 = zeros(length(tableName),length(tableName));
 table13Step3Row = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["General Government"],tableDict["External"]];
-table13Step3Col = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["External"]];
+table13Step3Col = [tableDict["Households"],tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["External"]];
 for i in table13Step3Col;
     for ring in table13Step3Row;
         table13Step3[ring,i] = (table13[tableDict["Total"],i]-sum(table13[1:(length(tableName)-1),i]))*(
