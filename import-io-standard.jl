@@ -2,15 +2,17 @@
 #using Ipopt: optimize!
 using Base: Int64
 using XLSX: length
-#=using Pkg
+using Pkg
 Pkg.add("Tables")
+Pkg.add("TableView")
 Pkg.add("DataFrames")
 Pkg.add("XLSX")
 Pkg.add("ExcelReaders")
 Pkg.add("JuMP")
 Pkg.add("Ipopt")
-=#
-using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt;
+Pkg.add("NamedArrays")
+
+using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, TableView;
 IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
 
 #filepath cross system compatability code
@@ -34,22 +36,24 @@ IO = zeros(length(IOSourceRow), length(IOSourceCol));
 #import numerical data into IO
 IO[1:length(IOSourceRow), 1:length(IOSourceCol)] = IOSource[IOSourceRow, IOSourceCol];
 #creating vectors of titles for IO
-IOCodeRow = IOSource[IOSourceRow, 1];
+IOCodeRow = string.(IOSource[IOSourceRow, 1]);
 IOCodeRow[length(IOSourceRow)] = "T2";
-IOCodeCol = IOSource[3, IOSourceCol];
-IONameRow = IOSource[IOSourceRow, 2];
-IONameCol = IOSource[2, IOSourceCol];
-
-#code to sum public and private entities into one collumn
+IOCodeCol = string.(IOSource[3, IOSourceCol]);
+IONameRow = string.(IOSource[IOSourceRow, 2]);
+IONameCol = string.(IOSource[2, IOSourceCol]);
+IO = NamedArray(IO)
+setnames!(IO, string.(IOCodeRow), 1)
+setnames!(IO, string.(IOCodeCol), 2)
+#code to sum public and private entities into one column
 investment = findall(x -> occursin("Capital Formation", x), IONameCol);
 IO[:, investment[1]]=sum(eachcol(IO[:, investment[1:2]]));
 IO = IO[:,Not(investment[2])];
-#alter title vectors accordingly (include Q in total investment collumn in IOcode)
+#alter title vectors accordingly (include Q in total investment column in IOcode)
 IOCodeCol[investment[1]] = "Q3+Q4";
-IOCodeCol = IOCodeCol[Not(investment[2])];
+IOCodeCol = string.(IOCodeCol[Not(investment[2])]);
 IONameCol[investment[1]] = "Private and Public Gross Fixed Capital Formation";
 IONameCol = IONameCol[Not(investment[2])];
-#creating a dictionary for the index of each collumn and row in IO by IOCode
+#creating a dictionary for the index of each column and row in IO by IOCode
 IOColDict = Dict(IOCodeCol .=> [1:1:8;]);
 IORowDict = Dict(IOCodeRow .=> [1:1:8;]);
 IOCapForm = findall(x -> occursin("Capital Formation", x), IONameCol);
@@ -73,7 +77,7 @@ table5aRowDict = Dict(table5aNameRow .=> [1:1:length(table5aNameRow);]);
 table5aColDict = Dict(table5aNameCol .=> [1:1:length(table5aNameCol);]);
 table5a = zeros(length(table5aNameRow), length(table5aNameCol));
 
-#filling in totals collumn from corresponding IO data
+#filling in totals column from corresponding IO data
 table5a[table5aRowDict["Domestic Commodities"], table5aColDict["Total"]] = sum(IO[IORowDict["T1"],IOCapForm]);
 table5a[table5aRowDict["Imported Commodities, complementary"], table5aColDict["Total"]] = sum(IO[IORowDict["P5"],IOCapForm]);
 table5a[table5aRowDict["Imported Commodities, competing"], table5aColDict["Total"]] = sum(IO[IORowDict["P6"],IOCapForm]);
@@ -113,7 +117,7 @@ table5bRowDict = Dict(table5bNameRow .=> [1:1:length(table5bNameRow);]);
 table5bColDict = Dict(table5bNameCol .=> [1:1:length(table5bNameCol);]);
 table5b = zeros(length(table5bNameRow), length(table5bNameCol));
 
-#filling in totals collumn from corresponding IO data
+#filling in totals column from corresponding IO data
 table5b[table5bRowDict["Domestic Commodities"], table5bColDict["Total"]] = sum(IO[IORowDict["T1"],IOChangeInv]);
 table5b[table5bRowDict["Imported Commodities, complementary"], table5bColDict["Total"]] = sum(IO[IORowDict["P5"],IOChangeInv]);
 table5b[table5bRowDict["Imported Commodities, competing"], table5bColDict["Total"]] = sum(IO[IORowDict["P6"],IOChangeInv]);
@@ -179,7 +183,7 @@ ASNAExtInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204043_External_Acco
 tableName = ["Households", "Non-Financial Corporations", "Financial Corporations", "General Government", "External", "Total"];
 tableDict = Dict(tableName .=> [1:1:length(tableName);]);
 table6 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 table6[tableDict["Total"],tableDict["Households"]] = (first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Interest", x), string.(ASNAHouseInc[1,:]))])
 +first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Imputed interest", x), string.(ASNAHouseInc[1,:]))]));
 table6[tableDict["Total"],tableDict["Non-Financial Corporations"]] = (first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Interest", x), string.(ASNANonFinInc[1,:]))])
@@ -197,7 +201,7 @@ table6[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,
 
 if 0.98*sum(table6[:,length(tableName)])<sum(table6[length(tableName),:])<1.02*sum(table6[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 6")
+    error("Large discrepancy in row and column total sums in table 6")
 end
 
 #assuming gov only receives interest from fin corps
@@ -235,7 +239,7 @@ table6 = table6+table6Step4;
 #table 7
 #initialising table
 table7 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 table7[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Dividends", x), string.(ASNAHouseInc[1,:]))]);
 table7[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Dividends", x), string.(ASNANonFinInc[1,:]))]);
 table7[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("receivable - Dividends", x), string.(ASNAFinInc[1,:]))]);
@@ -250,7 +254,7 @@ table7[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,
 
 if 0.98*sum(table7[:,length(tableName)])<sum(table7[length(tableName),:])<1.02*sum(table7[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 7")
+    error("Large discrepancy in row and column total sums in table 7")
 end
 
 #assuming gov only receives dividends from non-fin corps
@@ -284,7 +288,7 @@ table7 = table7+table7Step4;
 #table 8
 #initialising table
 table8 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 table8[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Reinvested", x), string.(ASNAHouseInc[1,:]))]);
 table8[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Reinvested", x), string.(ASNANonFinInc[1,:]))]);
 table8[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("receivable - Reinvested", x), string.(ASNAFinInc[1,:]))]);
@@ -299,7 +303,7 @@ table8[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,
 
 if 0.98*sum(table8[:,length(tableName)])<sum(table8[length(tableName),:])<1.02*sum(table8[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 8")
+    error("Large discrepancy in row and column total sums in table 8")
 end
 #assuming that values can be negative
 #solve missing values with Ipopt
@@ -337,7 +341,7 @@ table8 = table8+table8Step3;
 #table 9
 #initialising table
 table9 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 table9[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAHouseInc[1,:]))]);
 table9[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNANonFinInc[1,:]))]);
 table9[tableDict["Total"],tableDict["Financial Corporations"]] = first(ASNAFinInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAFinInc[1,:]))]);
@@ -352,7 +356,7 @@ table9[tableDict["External"],tableDict["Total"]] = 0.0;
 
 if 0.98*sum(table9[:,length(tableName)])<sum(table9[length(tableName),:])<1.02*sum(table9[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 9")
+    error("Large discrepancy in row and column total sums in table 9")
 end
 
 #solve missing values with Ipopt
@@ -371,7 +375,7 @@ table9[1:(length(tableName)-1), 1:(length(tableName)-1)] = table9[1:(length(tabl
 #table 10
 #initialising table
 table10 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 table10[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("Social assistance benefits", x), string.(ASNAHouseInc[1,:]))]);
 table10[tableDict["General Government"],tableDict["Total"]] =  table10[tableDict["Total"],tableDict["Households"]];
 #filling in missing values
@@ -380,7 +384,7 @@ table10[tableDict["General Government"],tableDict["Households"]] =  table10[tabl
 #table 11
 #initialising table
 table11 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 #assuming that the large discrepancy in the paid and received claims is a result of households not reporting small claims
 #table11[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Non-life", x), string.(ASNAHouseInc[1,:]))]);
 table11[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Non-life", x), string.(ASNANonFinInc[1,:]))]);
@@ -388,7 +392,7 @@ table11[tableDict["Financial Corporations"],tableDict["Total"]] = first(ASNAFinI
 table11[tableDict["Total"],tableDict["Households"]]= table11[tableDict["Financial Corporations"],tableDict["Total"]] - table11[tableDict["Total"],tableDict["Non-Financial Corporations"]];
 if 0.98*sum(table11[:,length(tableName)])<sum(table11[length(tableName),:])<1.02*sum(table11[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 11")
+    error("Large discrepancy in row and column total sums in table 11")
 end
 #filling in missing values
 table11[tableDict["Financial Corporations"],tableDict["Households"]]=table11[tableDict["Total"],tableDict["Households"]];
@@ -397,7 +401,7 @@ table11[tableDict["Financial Corporations"],tableDict["Non-Financial Corporation
 #table 12
 #initialising table
 table12 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 #also assuming in the same manner as in table 11 that the missing data is from the household side
 table12[tableDict["Total"],tableDict["Households"]] = 0.0;
 table12[tableDict["Total"],tableDict["Non-Financial Corporations"]] = 0.0;
@@ -414,7 +418,7 @@ table12[tableDict["Households"],tableDict["Total"]] = sum(table12[length(tableNa
 
 if 0.98*sum(table12[:,length(tableName)])<sum(table12[length(tableName),:])<1.02*sum(table12[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 12")
+    error("Large discrepancy in row and column total sums in table 12")
 end
 
 #filling in empty values
@@ -446,7 +450,7 @@ table12 = table12+table12Step3;
 #table 13
 #initialising table
 table13 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 table13[tableDict["Total"],tableDict["Households"]] = (first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Total other current transfers ;", x), string.(ASNAHouseInc[1,:]))])
 +first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Current transfers to ", x), string.(ASNAHouseInc[1,:]))]));
 table13[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Other current transfers ;", x), string.(ASNANonFinInc[1,:]))]);
@@ -465,7 +469,7 @@ table13[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow
 
 if 0.98*sum(table13[:,length(tableName)])<sum(table13[length(tableName),:])<1.02*sum(table13[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 13")
+    error("Large discrepancy in row and column total sums in table 13")
 end
 
 #filling in empty values
@@ -515,7 +519,7 @@ table14[tableDict["General Government"],tableDict["Total"]] = first(ASNAGovCap[A
 table14[tableDict["External"],tableDict["Total"]] = first(ASNAExtInc[ASNAYearRow,findall(x -> occursin("Capital transfers, payable ;", x), string.(ASNAExtInc[1,:]))]);
 if 0.98*sum(table14[:,length(tableName)])<sum(table14[length(tableName),:])<1.02*sum(table14[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 14")
+    error("Large discrepancy in row and column total sums in table 14")
 end
 
 #solve missing values with Ipopt
@@ -534,7 +538,7 @@ table14[1:(length(tableName)-1), 1:(length(tableName)-1)] = table14[1:(length(ta
 #table 15
 #initialising table
 table15 = zeros(length(tableName),length(tableName));
-#allocating total collumn and row data
+#allocating total column and row data
 if first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))])<=0
     table15[tableDict["Households"],tableDict["Total"]] = abs(first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))]));
 else
@@ -563,7 +567,7 @@ end
 
 if 0.98*sum(table15[:,length(tableName)])<sum(table15[length(tableName),:])<1.02*sum(table15[:,length(tableName)])
 else
-    error("Large discrepancy in row and collumn total sums in table 15")
+    error("Large discrepancy in row and column total sums in table 15")
 end
 
 #solve missing values with Ipopt
@@ -737,7 +741,7 @@ for ring in [1:1:length(table17TableNames);]
         table17TotAv = (table17RowTot + table17ColTot)/2;
         if 0.98*abs(table17RowTot)<abs(table17TotAv)<1.04*abs(table17RowTot)
         else
-            error("Large discrepancy in row and collumn total sums in table 17."*string(ring))
+            error("Large discrepancy in row and column total sums in table 17."*string(ring))
         end
         table17[ring][length(tableName),length(tableName)] = table17TotAv;
         for i in 1:(length(tableName)-1);
