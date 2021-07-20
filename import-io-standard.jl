@@ -3,14 +3,14 @@
 using Base: Int64
 using XLSX: length
 using Pkg
-Pkg.add("Tables")
+#=Pkg.add("Tables")
 Pkg.add("TableView")
 Pkg.add("DataFrames")
 Pkg.add("XLSX")
 Pkg.add("ExcelReaders")
 Pkg.add("JuMP")
 Pkg.add("Ipopt")
-Pkg.add("NamedArrays")
+Pkg.add("NamedArrays")=#
 
 using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, TableView;
 IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
@@ -474,7 +474,7 @@ end
 
 #filling in empty values
 table13Step3 = zeros(length(tableName),length(tableName));
-table13Step3Row = [tableDict["Non-Financial Corporations"],[tableDict["Financial Corporations"],tableDict["General Government"],tableDict["External"]];
+table13Step3Row = [tableDict["Non-Financial Corporations"],tableDict["Financial Corporations"],tableDict["General Government"],tableDict["External"]];
 table13Step3Col = [tableDict["General Government"]];
 for i in table13Step3Col;
     for ring in table13Step3Row;
