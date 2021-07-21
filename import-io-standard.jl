@@ -12,7 +12,8 @@ Pkg.add("ExcelReaders")
 Pkg.add("JuMP")
 Pkg.add("Ipopt")
 Pkg.add("NamedArrays")
-using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays;
+Pkg.add("DelimitedFiles")
+using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, DelimitedFiles;
 =#
 
 IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
@@ -851,11 +852,13 @@ differences = sam[14,:]-sam[:,14];
 differences = NamedArray(differences);
 setnames!(differences, samName, 1);
 
-samShortname = [ "Prod", "Fctr", "HhldCrt", "NfinCrt", "Fin_Crt", "GvntCrt", "ExtlCrt", "HhldCpl", "NFinCpl", "Fin_Cpl", "GvntCpl", "ExtlCpl"]
+samShortName = [ "Prod", "Fctr", "HhldCrt", "NfinCrt", "Fin_Crt", "GvntCrt", "ExtlCrt", "HhldCpl", "NFinCpl", "FinCpl", "GvntCpl", "ExtlCpl","ErrOmm", "Total"];
 
-sam = NamedArray(sam)
-setnames!(sam, samShortname, 1)
-setnames!(sam, samShortname, 1)
+sam = NamedArray(sam);
+setnames!(sam, samShortName, 1);
+setnames!(sam, samShortName, 2);
+
+writedlm("sam.csv", sam, ',');
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
