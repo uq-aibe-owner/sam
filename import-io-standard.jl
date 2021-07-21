@@ -838,13 +838,16 @@ sam[samDict["Foreigners Capital Account"], samDict["Foreigners Current Account"]
 sam[samDict["Households Capital Account"]:samDict["Foreigners Capital Account"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]]= capitalToCapital[1:length(tableDict)-1,1:length(tableDict)-1];
 sam[samDict["Government Current Account"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Taxes less subsidies on products"],1:length(table5cNameCol)-1] + table5c[table5cRowDict["Other taxes less subsidies on investment"],1:length(table5cNameCol)-1];
 sam[samDict["Foreigners Current Account"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Imported Commodities"],1:length(table5cNameCol)-1];
-sam[samDict["Net Errors and Ommisions"],samDict["Production Activities"]] =  table19EAndO[tableDict["Total"]];
 sam[samDict["Net Errors and Ommisions"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]] = -1 .* table19EAndO[1:length(tableName)-1];
 
 for i in 1:length(samName)-1
     sam[i,samDict["Total"]]=sum(sam[i,:]);
     sam[samDict["Total"],i]=sum(sam[:,i]);
 end
+
+differences = sam[14,:]-sam[:,14];
+differences = NamedArray(differences);
+setnames!(differences, samName, 1);
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
