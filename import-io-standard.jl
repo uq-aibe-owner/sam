@@ -798,11 +798,12 @@ currentToCurrent[tableDict["General Government"],tableDict["Financial Corporatio
 #from general Government
 currentToCurrent[tableDict["External"],tableDict["General Government"]] = currentToCurrent[tableDict["External"],tableDict["General Government"]] + sum(IO[IORowDict["P5"]:IORowDict["P6"],IOColDict["Q2"]]);
 #from external 
-currentToCurrent[tableDict["General Government"],tableDict["External"]] = currentToCurrent[tableDict["General Government"],tableDict["External"]] + sum(IO[IORowDict["P3"],IOColDict["Q2"]]) + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Currenttaxesonincome,wealth,etc;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
+currentToCurrent[tableDict["General Government"],tableDict["External"]] = currentToCurrent[tableDict["General Government"],tableDict["External"]] + sum(IO[IORowDict["P3"],IOColDict["Q7"]]) + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Currenttaxesonincome,wealth,etc;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
 currentToCurrent[tableDict["Households"],tableDict["External"]] = currentToCurrent[tableDict["Households"],tableDict["External"]] + first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("payable-Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))]);
+currentToCurrent[tableDict["External"],tableDict["External"]] = currentToCurrent[tableDict["External"],tableDict["External"]] + sum(IO[IORowDict["P6"],IOColDict["Q7"]]);
 
 #capital to capital transfers
-capitalToCapital = table14 + table15 + table19
+capitalToCapital = transpose(table14) + transpose(table15) + table19
 
 ASNAConsFixCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204047_Cons_Fixed_Capital_By_Industry.xls", "Data1");
 
