@@ -1,9 +1,10 @@
 #cd("C:\\Users\\jaber\\OneDrive\\Documents\\AIBE\\sam")
 #using Ipopt: optimize!
-#=
+
 using Base: Int64
 using XLSX: length
 using Pkg
+#=
 Pkg.add("Tables")
 Pkg.add("TableView")
 Pkg.add("DataFrames")
@@ -15,6 +16,8 @@ Pkg.add("NamedArrays")
 Pkg.add("DelimitedFiles")
 using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, DelimitedFiles;
 =#
+using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays;
+
 
 IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
 
