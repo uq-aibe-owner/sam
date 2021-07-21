@@ -906,3 +906,4 @@ D = df2dict(df, :IOCode, :x3)
 #take out spaces in all find functions
 #generalise the ASNAYearRow to just search every time
 #rename tables from numbers to abbreviations
+#change arrays to NamedArrays
