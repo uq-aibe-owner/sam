@@ -1,18 +1,20 @@
 #cd("C:\\Users\\jaber\\OneDrive\\Documents\\AIBE\\sam")
 #using Ipopt: optimize!
+#=
 using Base: Int64
 using XLSX: length
 using Pkg
-#=Pkg.add("Tables")
+Pkg.add("Tables")
 Pkg.add("TableView")
 Pkg.add("DataFrames")
 Pkg.add("XLSX")
 Pkg.add("ExcelReaders")
 Pkg.add("JuMP")
 Pkg.add("Ipopt")
-Pkg.add("NamedArrays")=#
+Pkg.add("NamedArrays")
+using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays;
+=#
 
-using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, TableView;
 IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
 
 #filepath cross system compatability code
@@ -848,6 +850,12 @@ end
 differences = sam[14,:]-sam[:,14];
 differences = NamedArray(differences);
 setnames!(differences, samName, 1);
+
+samShortname = [ "Prod", "Fctr", "HhldCrt", "NfinCrt", "Fin_Crt", "GvntCrt", "ExtlCrt", "HhldCpl", "NFinCpl", "Fin_Cpl", "GvntCpl", "ExtlCpl"]
+
+sam = NamedArray(sam)
+setnames!(sam, samShortname, 1)
+setnames!(sam, samShortname, 1)
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
