@@ -854,8 +854,8 @@ end
 differencesCol = ["Diff" (sam[14,:]-sam[:,14])' 0.0];
 differencesRow = sam[:,14]-sam[14,:];
 
-samShortName = [ "Prod", "Fctr", "HhldCrt", "NfinCrt", "Fin_Crt", "GvntCrt", "ExtlCrt", "HhldCpl", "NFinCpl", "FinCpl", "GvntCpl", "ExtlCpl","ErrOmm", "Total"];
-samShortName2 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "FinCpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total" "Diff"];
+samShortName = [ "Prod", "Fctr", "HhldCrt", "NfinCrt", "Fin_Crt", "GvntCrt", "ExtlCrt", "HhldCpl", "NFinCpl", "Fin_Cpl", "GvntCpl", "ExtlCpl","ErrOmm", "Total"];
+samShortName2 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "Fin_Cpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total" "Diff"];
 
 sam = NamedArray(sam);
 setnames!(sam, samShortName, 1);
@@ -909,7 +909,11 @@ for i in 1:length(samName)-1
     sam[samDict["Total"],i]=sum(sam[1:length(samName)-1,i]);
 end
 
-samShortName3 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "FinCpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total"];
+sam[length(samName),length(samName)]=sum(sam[length(samName),:]);
+
+sam = round.(sam, digits = 9);
+
+samShortName3 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "Fin_Cpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total"];
 
 withTitles=[samShortName3 ; [samShortName sam]];
 
