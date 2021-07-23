@@ -844,24 +844,77 @@ sam[samDict["Foreigners Capital Account"], samDict["Foreigners Current Account"]
 sam[samDict["Households Capital Account"]:samDict["Foreigners Capital Account"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]]= capitalToCapital[1:length(tableDict)-1,1:length(tableDict)-1];
 sam[samDict["Government Current Account"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Taxes less subsidies on products"],1:length(table5cNameCol)-1] + table5c[table5cRowDict["Other taxes less subsidies on investment"],1:length(table5cNameCol)-1];
 sam[samDict["Foreigners Current Account"],samDict["Households Capital Account"]:samDict["Government Capital Account"]] = table5c[table5cRowDict["Imported Commodities"],1:length(table5cNameCol)-1];
-sam[samDict["Net Errors and Ommisions"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]] = -1 .* table19EAndO[1:length(tableName)-1];
+sam[samDict["Net Errors and Ommisions"],samDict["Households Capital Account"]:samDict["Foreigners Capital Account"]] = -1 .* table19EAndO[1:length(tableName)-1] + sum(table19EAndO[1:length(tableName)-1]).*abs.(table19EAndO[1:length(tableName)-1])./sum(abs.(table19EAndO[1:length(tableName)-1]));
 
 for i in 1:length(samName)-1
-    sam[i,samDict["Total"]]=sum(sam[i,:]);
-    sam[samDict["Total"],i]=sum(sam[:,i]);
+    sam[i,samDict["Total"]]=sum(sam[i,1:length(samName)-1]);
+    sam[samDict["Total"],i]=sum(sam[1:length(samName)-1,i]);
 end
 
-differences = sam[14,:]-sam[:,14];
-differences = NamedArray(differences);
-setnames!(differences, samName, 1);
+differencesCol = ["Diff" (sam[14,:]-sam[:,14])' 0.0];
+differencesRow = sam[:,14]-sam[14,:];
 
 samShortName = [ "Prod", "Fctr", "HhldCrt", "NfinCrt", "Fin_Crt", "GvntCrt", "ExtlCrt", "HhldCpl", "NFinCpl", "FinCpl", "GvntCpl", "ExtlCpl","ErrOmm", "Total"];
+samShortName2 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "FinCpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total" "Diff"];
 
 sam = NamedArray(sam);
 setnames!(sam, samShortName, 1);
 setnames!(sam, samShortName, 2);
 
-writedlm("sam.csv", sam, ',');
+withTitlesAndDiff=[samShortName2 ; [samShortName sam differencesRow] ; differencesCol];
+
+writedlm("samWithTitlesAndDiff.csv", withTitlesAndDiff, ',');
+
+function posfind(c)
+    a = similar(c, Int)
+    count = 1
+    @inbounds for i in eachindex(c)
+        a[count] = i
+        count += (c[i] > 0.0)
+    end
+    return resize!(a, count-1)
+end
+
+#RAS the differences into the sam
+rasDiffCol = sam[:,14]-sam[14,:];
+rasDiffRow = -1 .* rasDiffCol;
+posRow = posfind(rasDiffRow);
+posCol = posfind(rasDiffCol);
+rasDiffCol = rasDiffCol[posCol];
+rasDiffRow = rasDiffRow[posRow];
+
+#initialize matrix
+modDiff = Model(Ipopt.Optimizer);
+@variable(modDiff, x[1:length(rasDiffRow), 1:length(rasDiffCol)]);
+@NLobjective(modDiff, Min, sum((x[i,j]) ^ 2 for i in 1:(length(rasDiffRow)), j in 1:(length(rasDiffCol))));
+for i in 1:length(rasDiffRow);
+    @constraint(modDiff, sum(x[i,:]) == rasDiffRow[i]);
+    for j in 1:length(rasDiffCol);
+        if sam[posRow[i],posCol[j]] == 0.0;
+            @constraint(modDiff, x[i,j] == 0.0);
+        else
+        end
+    end
+end
+for i in 1:length(rasDiffCol);
+    @constraint(modDiff, sum(x[:,i]) == rasDiffCol[i]);
+end
+
+optimize!(modDiff);
+
+sam[posRow,posCol]=sam[posRow,posCol]+value.(x);
+
+for i in 1:length(samName)-1
+    sam[i,samDict["Total"]]=sum(sam[i,1:length(samName)-1]);
+    sam[samDict["Total"],i]=sum(sam[1:length(samName)-1,i]);
+end
+
+samShortName3 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "FinCpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total"];
+
+withTitles=[samShortName3 ; [samShortName sam]];
+
+writedlm("sam.csv", withTitles, ',');
+
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
@@ -903,10 +956,7 @@ D = df2dict(df, :IOCode, :x3)
 =#
 
 #notes
-#double check for missing accounts i.e. they said 0 for 96-97 so they were made to be 0 for this year, but may not be in other years
-#also check for other missing accounts, confusingly labelled so skipped over etc
-#implement loop and more ras-ing
-#take out spaces in all find functions
+#implement loop and more ras-ing - take out spaces in all find functions
 #generalise the ASNAYearRow to just search every time
 #rename tables from numbers to abbreviations
 #change arrays to NamedArrays
