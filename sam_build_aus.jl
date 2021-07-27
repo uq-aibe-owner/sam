@@ -1,4 +1,3 @@
-cd("C:\\Users\\jaber\\OneDrive\\Documents\\AIBE\\sam")
 #using Ipopt: optimize!
 
 using Base: Int64
@@ -18,13 +17,24 @@ Pkg.add("DelimitedFiles")
 using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, DelimitedFiles;
 
 
-IOSource = ExcelReaders.readxlsheet("5209055001DO001_201819.xls", "Table 5");
+IOSource = ExcelReaders.readxlsheet("IOData"*pathmark*"5209055001DO001_201819.xls", "Table 5");
 
 #filepath cross system compatability code
 if Sys.KERNEL === :NT || Sys.KERNEL === :Windows
     pathmark = "\\"
 else
     pathmark = "/"
+end
+
+#functions for ease of display
+
+function tableprint(c)
+    withTitles = [["Titles" permutedims(names(c)[2])];[names(c)[1] c]]
+end
+
+function tablecsv(c::Any, d::AbstractString)
+    withTitles = [[d permutedims(names(c)[2])];[names(c)[1] c]]
+    writedlm("tableCSV"*pathmark*d*".csv", withTitles, ',');
 end
 
 #indexing vectors for initial data import groups
@@ -46,9 +56,9 @@ IOCodeRow[length(IOSourceRow)] = "T2";
 IOCodeCol = string.(IOSource[3, IOSourceCol]);
 IONameRow = string.(IOSource[IOSourceRow, 2]);
 IONameCol = string.(IOSource[2, IOSourceCol]);
-IO = NamedArray(IO)
-setnames!(IO, string.(IOCodeRow), 1)
-setnames!(IO, string.(IOCodeCol), 2)
+IO = NamedArray(IO);
+setnames!(IO, string.(IOCodeRow), 1);
+setnames!(IO, string.(IOCodeCol), 2);
 #code to sum public and private entities into one column
 investment = findall(x -> occursin("Capital Formation", x), IONameCol);
 IO[:, investment[1]]=sum(eachcol(IO[:, investment[1:2]]));
@@ -81,6 +91,9 @@ table5aNameRow = ["Domestic Commodities", "Imported Commodities, complementary",
 table5aRowDict = Dict(table5aNameRow .=> [1:1:length(table5aNameRow);]);
 table5aColDict = Dict(table5aNameCol .=> [1:1:length(table5aNameCol);]);
 table5a = zeros(length(table5aNameRow), length(table5aNameCol));
+table5a = NamedArray(table5a);
+setnames!(table5a, string.(table5aNameRow), 1);
+setnames!(table5a, string.(table5aNameCol), 2);
 
 #filling in totals column from corresponding IO data
 table5a[table5aRowDict["Domestic Commodities"], table5aColDict["Total"]] = sum(IO[IORowDict["T1"],IOCapForm]);
@@ -121,6 +134,9 @@ table5bNameRow = ["Domestic Commodities", "Imported Commodities, complementary",
 table5bRowDict = Dict(table5bNameRow .=> [1:1:length(table5bNameRow);]);
 table5bColDict = Dict(table5bNameCol .=> [1:1:length(table5bNameCol);]);
 table5b = zeros(length(table5bNameRow), length(table5bNameCol));
+table5b = NamedArray(table5b);
+setnames!(table5b, string.(table5bNameRow), 1);
+setnames!(table5b, string.(table5bNameCol), 2);
 
 #filling in totals column from corresponding IO data
 table5b[table5bRowDict["Domestic Commodities"], table5bColDict["Total"]] = sum(IO[IORowDict["T1"],IOChangeInv]);
@@ -165,6 +181,9 @@ table5cNameRow = ["Domestic Commodities", "Imported Commodities", "Taxes less su
 table5cRowDict = Dict(table5cNameRow .=> [1:1:length(table5cNameRow);]);
 table5cColDict = Dict(table5cNameCol .=> [1:1:length(table5cNameCol);]);
 table5c = zeros(length(table5cNameRow), length(table5cNameCol));
+table5c = NamedArray(table5c);
+setnames!(table5c, string.(table5cNameRow), 1);
+setnames!(table5c, string.(table5cNameCol), 2);
 
 #do totals calcuations to get all values in 5c
 table5c[table5cRowDict["Domestic Commodities"],:] = (table5a[table5aRowDict["Domestic Commodities"],:] +
@@ -188,6 +207,9 @@ ASNAExtInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204043_External_Acco
 tableName = ["Households", "Non-Financial Corporations", "Financial Corporations", "General Government", "External", "Total"];
 tableDict = Dict(tableName .=> [1:1:length(tableName);]);
 table6 = zeros(length(tableName),length(tableName));
+table6 = NamedArray(table6);
+setnames!(table6, string.(tableName), 1);
+setnames!(table6, string.(tableName), 2);
 #allocating total column and row data
 table6[tableDict["Total"],tableDict["Households"]] = (first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Interest", x), string.(ASNAHouseInc[1,:]))])
 +first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Imputed interest", x), string.(ASNAHouseInc[1,:]))]));
@@ -244,6 +266,9 @@ table6 = table6+table6Step4;
 #table 7
 #initialising table
 table7 = zeros(length(tableName),length(tableName));
+table7 = NamedArray(table7);
+setnames!(table7, string.(tableName), 1);
+setnames!(table7, string.(tableName), 2);
 #allocating total column and row data
 table7[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Dividends", x), string.(ASNAHouseInc[1,:]))]);
 table7[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Dividends", x), string.(ASNANonFinInc[1,:]))]);
@@ -293,6 +318,9 @@ table7 = table7+table7Step4;
 #table 8
 #initialising table
 table8 = zeros(length(tableName),length(tableName));
+table8 = NamedArray(table8);
+setnames!(table8, string.(tableName), 1);
+setnames!(table8, string.(tableName), 2);
 #allocating total column and row data
 table8[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Reinvested", x), string.(ASNAHouseInc[1,:]))]);
 table8[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Reinvested", x), string.(ASNANonFinInc[1,:]))]);
@@ -312,7 +340,6 @@ else
 end
 #assuming that values can be negative
 #solve missing values with Ipopt
-println("ras for table 8")
 mod8 = Model(Ipopt.Optimizer);
 @variable(mod8, x[1:3, 1:4]>=0);
 @NLobjective(mod8, Min, sum((x[i,j]) ^ 2 for i in 1:3, j in 1:4));
@@ -325,9 +352,7 @@ mod8 = Model(Ipopt.Optimizer);
 @constraint(mod8, sum(x[3,:]) == table8[5,tableDict["Total"]]);
 #@constraint(mod8, x[3,4] == 0);
 optimize!(mod8);
-y= value.(x)
-#table8b[[2,3,5], []] = table8[1:(length(tableName)-1), 1:(length(tableName)-1)] + value.(x);
-#println(table8)
+table8[[2,3,5], [1,2,3,5]] = table8[[2,3,5], [1,2,3,5]] + value.(x);
 
 #=spread the external receivable totals between fin and non-fin Corporations
 table8Step3 = zeros(length(tableName),length(tableName));
@@ -346,6 +371,9 @@ table8 = table8+table8Step3;
 #table 9
 #initialising table
 table9 = zeros(length(tableName),length(tableName));
+table9 = NamedArray(table9);
+setnames!(table9, string.(tableName), 1);
+setnames!(table9, string.(tableName), 2);
 #allocating total column and row data
 table9[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNAHouseInc[1,:]))]);
 table9[tableDict["Total"],tableDict["Non-Financial Corporations"]] = first(ASNANonFinInc[ASNAYearRow,findall(x -> occursin("receivable - Rent on natural", x), string.(ASNANonFinInc[1,:]))]);
@@ -380,6 +408,9 @@ table9[1:(length(tableName)-1), 1:(length(tableName)-1)] = table9[1:(length(tabl
 #table 10
 #initialising table
 table10 = zeros(length(tableName),length(tableName));
+table10 = NamedArray(table10);
+setnames!(table10, string.(tableName), 1);
+setnames!(table10, string.(tableName), 2);
 #allocating total column and row data
 table10[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("Social assistance benefits", x), string.(ASNAHouseInc[1,:]))]);
 table10[tableDict["General Government"],tableDict["Total"]] =  table10[tableDict["Total"],tableDict["Households"]];
@@ -389,6 +420,9 @@ table10[tableDict["General Government"],tableDict["Households"]] =  table10[tabl
 #table 11
 #initialising table
 table11 = zeros(length(tableName),length(tableName));
+table11 = NamedArray(table11);
+setnames!(table11, string.(tableName), 1);
+setnames!(table11, string.(tableName), 2);
 #allocating total column and row data
 #assuming that the large discrepancy in the paid and received claims is a result of households not reporting small claims
 #table11[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Non-life", x), string.(ASNAHouseInc[1,:]))]);
@@ -406,6 +440,9 @@ table11[tableDict["Financial Corporations"],tableDict["Non-Financial Corporation
 #table 12
 #initialising table
 table12 = zeros(length(tableName),length(tableName));
+table12 = NamedArray(table12);
+setnames!(table12, string.(tableName), 1);
+setnames!(table12, string.(tableName), 2);
 #allocating total column and row data
 #also assuming in the same manner as in table 11 that the missing data is from the household side
 table12[tableDict["Total"],tableDict["Households"]] = 0.0;
@@ -455,6 +492,9 @@ table12 = table12+table12Step3;
 #table 13
 #initialising table
 table13 = zeros(length(tableName),length(tableName));
+table13 = NamedArray(table13);
+setnames!(table13, string.(tableName), 1);
+setnames!(table13, string.(tableName), 2);
 #allocating total column and row data
 table13[tableDict["Total"],tableDict["Households"]] = (first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Total other current transfers ;", x), string.(ASNAHouseInc[1,:]))])
 +first(ASNAHouseInc[ASNAYearRow,findall(x -> occursin("receivable - Current transfers to ", x), string.(ASNAHouseInc[1,:]))]));
@@ -505,6 +545,9 @@ table13 = table13+table13Step3;
 #table 14
 #initialising table
 table14 = zeros(length(tableName),length(tableName));
+table14 = NamedArray(table14);
+setnames!(table14, string.(tableName), 1);
+setnames!(table14, string.(tableName), 2);
 #filling in data from ASNA
 table14[tableDict["General Government"],tableDict["Households"]] = first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Capital transfers, receivable from general government ;", x), string.(ASNAHouseCap[1,:]))]);
 table14[tableDict["Total"],tableDict["Households"]] = first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Other capital transfers, receivable ;", x), string.(ASNAHouseCap[1,:]))])+table14[tableDict["General Government"],tableDict["Households"]];
@@ -543,6 +586,9 @@ table14[1:(length(tableName)-1), 1:(length(tableName)-1)] = table14[1:(length(ta
 #table 15
 #initialising table
 table15 = zeros(length(tableName),length(tableName));
+table15 = NamedArray(table15);
+setnames!(table15, string.(tableName), 1);
+setnames!(table15, string.(tableName), 2);
 #allocating total column and row data
 if first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))])<=0
     table15[tableDict["Households"],tableDict["Total"]] = abs(first(ASNAHouseCap[ASNAYearRow,findall(x -> occursin("Acquisitions less disposals of non-produced non-financial assets ;", x), string.(ASNAHouseCap[1,:]))]));
@@ -595,6 +641,9 @@ table16aDataCol = [ASNAHouseCap, ASNANonFinCap, ASNAFinCap, ASNAGovCap, ASNAExtI
 table16aRowDict = Dict(table16aNameRow .=> [1:1:length(table16aNameRow);]);
 table16aDataDict = Dict(tableName[1:length(tableName)-1] .=> table16aDataCol);
 table16a = zeros(length(table16aNameRow),length(tableName));
+table16a = NamedArray(table16a);
+setnames!(table16a, string.(table16aNameRow), 1);
+setnames!(table16a, string.(tableName), 2);
 #filling in values
 for i in tableName
     if i == "Total"
@@ -642,6 +691,9 @@ table16bDataCol = [ASNAHouseFin, ASNANonFinFin, ASNAFinFin, ASNAGovFin, ASNAExtF
 table16bRowDict = Dict(table16bNameRow .=> [1:1:length(table16bNameRow);]);
 table16bDataDict = Dict(tableName[1:length(tableName)-1] .=> table16bDataCol);
 table16b = zeros(length(table16bNameRow),length(tableName));
+table16b = NamedArray(table16b);
+setnames!(table16b, string.(table16bNameRow), 1);
+setnames!(table16b, string.(tableName), 2);
 #filling in values
 for i in tableName
     if i == "Total"
@@ -734,52 +786,61 @@ function myfind(c)
 end
 
 table17=Vector{Union{Matrix{Float64}, Nothing}}(undef, length(table17TableNames));
+table17 = NamedArray(table17);
 for ring in [1:1:length(table17TableNames);]
     println("this round is number ", ring)
-    table17[ring] = zeros(length(tableName),length(tableName));
-    table17[ring][length(tableName),:] = table16b[table16bRowDict["Acquisitionoffinancialassets-"*table17TableNames[ring]],:];
-    table17[ring][:,length(tableName)] = table16b[table16bRowDict["Incurrenceofliabilities-"*table17TableNames[ring]],:];
-    if sum(table17[ring][length(tableName),1:(length(tableName)-1)]) == sum(table17[ring][1:(length(tableName)-1),length(tableName)])
+    table17=zeros(length(tableName), length(tableName));
+    table17[length(tableName),:] = table16b[table16bRowDict["Acquisitionoffinancialassets-"*table17TableNames[ring]],:];
+    table17[:,length(tableName)] = table16b[table16bRowDict["Incurrenceofliabilities-"*table17TableNames[ring]],:];
+    if sum(table17[length(tableName),1:(length(tableName)-1)]) == sum(table17[1:(length(tableName)-1),length(tableName)])
     else
-        table17RowTot = sum(table17[ring][length(tableName),1:(length(tableName)-1)]);
-        table17ColTot = sum(table17[ring][1:(length(tableName)-1),length(tableName)]);
+        table17RowTot = sum(table17[length(tableName),1:(length(tableName)-1)]);
+        table17ColTot = sum(table17[1:(length(tableName)-1),length(tableName)]);
         table17TotAv = (table17RowTot + table17ColTot)/2;
         if 0.98*abs(table17RowTot)<abs(table17TotAv)<1.04*abs(table17RowTot)
         else
             error("Large discrepancy in row and column total sums in table 17."*string(ring))
         end
-        table17[ring][length(tableName),length(tableName)] = table17TotAv;
+        table17[length(tableName),length(tableName)] = table17TotAv;
         for i in 1:(length(tableName)-1);
-            table17[ring][length(tableName),i] = table17[ring][length(tableName),i]*table17TotAv/table17RowTot;
-            table17[ring][i,length(tableName)] = table17[ring][i,length(tableName)]*table17TotAv/table17ColTot;
+            table17[length(tableName),i] = table17[length(tableName),i]*table17TotAv/table17RowTot;
+            table17[i,length(tableName)] = table17[i,length(tableName)]*table17TotAv/table17ColTot;
         end
     end
-    nonZerosRow = myfind(table17[ring][:,length(tableName)]);
-    nonZerosCol = myfind(table17[ring][length(tableName),:]);
+    nonZerosRow = myfind(table17[:,length(tableName)]);
+    nonZerosCol = myfind(table17[length(tableName),:]);
     if length(nonZerosRow)-1 == 1;
-        table17[ring][nonZerosRow[1],nonZerosCol] = table17[ring][tableDict["Total"],nonZerosCol];
+        table17[nonZerosRow[1],nonZerosCol] = table17[tableDict["Total"],nonZerosCol];
     elseif length(nonZerosCol)-1 == 1;
-        table17[ring][nonZerosRow,nonZerosCol[1]] = table17[ring][nonZerosRow,tableDict["Total"]];
+        table17[nonZerosRow,nonZerosCol[1]] = table17[nonZerosRow,tableDict["Total"]];
     else
         mod17 = Model(Ipopt.Optimizer);
         @variable(mod17, x[1:(length(nonZerosRow)-1), 1:(length(nonZerosCol)-1)]);
         @NLobjective(mod17, Min, sum((x[i,j]) ^ 2 for i in 1:(length(nonZerosRow)-1), j in 1:(length(nonZerosCol)-1)));
         for i in 1:length(nonZerosRow)-1;
-            @constraint(mod17, sum(x[i,:]) == table17[ring][nonZerosRow[i],tableDict["Total"]]);
+            @constraint(mod17, sum(x[i,:]) == table17[nonZerosRow[i],tableDict["Total"]]);
         end
         for i in 1:(length(nonZerosCol)-1);
-            @constraint(mod17, sum(x[:,i]) == table17[ring][tableDict["Total"],nonZerosCol[i]]);
+            @constraint(mod17, sum(x[:,i]) == table17[tableDict["Total"],nonZerosCol[i]]);
         end
         if tableDict["External"] in nonZerosRow && tableDict["External"] in nonZerosCol
             @constraint(mod17, x[length(nonZerosRow)-1,length(nonZerosCol)-1] == 0);
         else
         end
         optimize!(mod17);
-        table17[ring][nonZerosRow[1:length(nonZerosRow)-1], nonZerosCol[1:length(nonZerosCol)-1]] = value.(x);
+        table17[nonZerosRow[1:length(nonZerosRow)-1], nonZerosCol[1:length(nonZerosCol)-1]] = value.(x);
     end
+    @eval $(Symbol(:table17_, ring)) = NamedArray(table17);
+    setnames!((@eval $(Symbol(:table17_, ring))), string.(tableName), 1);
+    setnames!((@eval $(Symbol(:table17_, ring))), string.(tableName), 2);
 end
-
-table19 = sum(table17[:]);
+table19 = zeros(length(tableName),length(tableName))
+for ring in [1:1:length(table17TableNames);]
+    table19 = table19 + (@eval $(Symbol(:table17_, ring)));
+end
+table19 = NamedArray(table19);
+setnames!(table19, string.(tableName), 1);
+setnames!(table19, string.(tableName), 2);
 table19TotRow = table19[:,tableDict["Total"]]+table16a[table16aRowDict["Netlending(+)/netborrowing(-);"],:];
 table19EAndO = table19[tableDict["Total"],:]-table19TotRow;
 
@@ -862,7 +923,7 @@ setnames!(sam, samShortName, 2);
 
 withTitlesAndDiff=[samShortName2 ; [samShortName sam differencesRow] ; differencesCol];
 
-writedlm("samWithTitlesAndDiff.csv", withTitlesAndDiff, ',');
+writedlm("tableCSV"*pathmark*"samWithTitlesAndDiff.csv", withTitlesAndDiff, ',');
 
 function posfind(c)
     a = similar(c, Int)
@@ -912,11 +973,7 @@ sam[length(samName),length(samName)]=sum(sam[length(samName),:]);
 
 sam = round.(sam, digits = 9);
 
-samShortName3 = ["Titles" "Prod" "Fctr" "HhldCrt" "NfinCrt" "Fin_Crt" "GvntCrt" "ExtlCrt" "HhldCpl" "NFinCpl" "Fin_Cpl" "GvntCpl" "ExtlCpl" "ErrOmm" "Total"];
-
-withTitles=[samShortName3 ; [samShortName sam]];
-
-writedlm("sam.csv", withTitles, ',');
+tablecsv(sam, "sam");
 
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
