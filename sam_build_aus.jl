@@ -1018,5 +1018,4 @@ D = df2dict(df, :IOCode, :x3)
 #notes
 #implement loop and more ras-ing - take out spaces in all find functions
 #generalise the ASNAYearRow to just search every time
-#rename tables from numbers to abbreviations
-#change arrays to NamedArrays
+#rename tables from numbers to abbreviations#new filepath test
