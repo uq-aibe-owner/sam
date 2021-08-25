@@ -16,15 +16,13 @@ Pkg.add("DelimitedFiles")
 =#
 using XLSX, ExcelReaders, DataFrames, Tables, JuMP, Ipopt, NamedArrays, DelimitedFiles;
 
-
-IOSource = ExcelReaders.readxlsheet("IOData"*pathmark*"5209055001DO001_201819.xls", "Table 5");
-
 #filepath cross system compatability code
 if Sys.KERNEL === :NT || Sys.KERNEL === :Windows
-    pathmark = "\\"
+    pathmark = "\\";
 else
-    pathmark = "/"
+    pathmark = "/";
 end
+
 
 #functions for ease of display
 
@@ -36,6 +34,8 @@ function tablecsv(c::Any, d::AbstractString)
     withTitles = [[d permutedims(names(c)[2])];[names(c)[1] c]]
     writedlm("tableCSV"*pathmark*d*".csv", withTitles, ',');
 end
+
+IOSource = ExcelReaders.readxlsheet("IOData"*pathmark*"5209055001DO001_201819.xls", "Table 5");
 
 #indexing vectors for initial data import groups
 intermediaryTotalsCol = findall(x -> occursin("T4", x), string.(IOSource[3,:]));
@@ -785,8 +785,6 @@ function myfind(c)
     return resize!(a, count-1)
 end
 
-table17=Vector{Union{Matrix{Float64}, Nothing}}(undef, length(table17TableNames));
-table17 = NamedArray(table17);
 for ring in [1:1:length(table17TableNames);]
     println("this round is number ", ring)
     table17=zeros(length(tableName), length(tableName));
@@ -925,6 +923,21 @@ withTitlesAndDiff=[samShortName2 ; [samShortName sam differencesRow] ; differenc
 
 writedlm("tableCSV"*pathmark*"samWithTitlesAndDiff.csv", withTitlesAndDiff, ',');
 
+#remove the negative values, put them into the correct spot
+#create matrix on top to store Changes
+samNegs = zeros(length(samName)-2,length(samName)-2);
+for i in 1:length(samName)-2
+    for j in 1:length(samName)-2
+        if sam[i,j] < 0 
+            samNegs[j,i] = abs(sam[i,j]);
+            sam[i,j]=0;
+        else
+        end
+    end
+end
+
+sam[1:length(samName)-2,1:length(samName)-2]=sam[1:length(samName)-2,1:length(samName)-2]+samNegs;
+
 function posfind(c)
     a = similar(c, Int)
     count = 1
@@ -975,6 +988,27 @@ sam = round.(sam, digits = 9);
 
 tablecsv(sam, "sam");
 
+#make full SAM with all 114 production activities (splitting up factors of production was quite challenging, that could be returned to)
+
+samFull = zeros(length(sam)+114,length(sam)+114);
+samFullName = vcat(IOSource[first(findall(x -> occursin("101", x), string.(IOSource[:,1]))):first(findall(x -> occursin("9502", x), string.(IOSource[:,1]))),1],samName);
+samFullDict = Dict(samFullName .=> [1:1:length(samFullName);])
+samFull[1:114,1:114] = IOSource[first(findall(x -> occursin("101", x), string.(IOSource[:,1]))):first(findall(x -> occursin("9502", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))];
+samFull[115,1:114] = IOSource[first(findall(x -> occursin("P1", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))]+
+IOSource[first(findall(x -> occursin("P2", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))];
+samFull[samFullDict["Government Current Account"],1:114]=IOSource[first(findall(x -> occursin("P3", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))]+
+IOSource[first(findall(x -> occursin("P4", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))];
+samFull[samFullDict["Foreigners Current Account"],1:114]=IOSource[first(findall(x -> occursin("P5", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))]+
+IOSource[first(findall(x -> occursin("P6", x), string.(IOSource[:,1]))), first(findall(x -> occursin("101", x), string.(IOSource[1,:]))): first(findall(x -> occursin("9502", x), string.(IOSource[1,:])))];
+samFull[1:114,samFullDict["Households Current Account"]] = IOSource[first(findall(x -> occursin("101", x), string.(IOSource[:,1]))):first(findall(x -> occursin("9502", x), string.(IOSource[:,1]))), first(findall(x -> occursin("Households ;\n Final Consumption Expenditure", x), string.(IOSource[2,:])))];
+samFull[1:114,samFullDict["Government Current Account"]] = IOSource[first(findall(x -> occursin("101", x), string.(IOSource[:,1]))):first(findall(x -> occursin("9502", x), string.(IOSource[:,1]))), first(findall(x -> occursin("General Government ;\n Final Consumption Expenditure", x), string.(IOSource[2,:])))];
+samFull[1:114,samFullDict["Foreigners Current Account"]] = IOSource[first(findall(x -> occursin("101", x), string.(IOSource[:,1]))):first(findall(x -> occursin("9502", x), string.(IOSource[:,1]))), first(findall(x -> occursin("Exports of Goods and Services", x), string.(IOSource[2,:])))];
+
+
+
+#split up IO table to make a full sam
+#do the optimizing as in dual 2by2 example by patrick
+
 #=convert dataframe to dictionary
 function increment!( d::Dict{S, T}, k::S, i::T) where {T<:Real, S<:Any}
     if haskey(d, k)
@@ -1019,3 +1053,4 @@ D = df2dict(df, :IOCode, :x3)
 #implement loop and more ras-ing - take out spaces in all find functions
 #generalise the ASNAYearRow to just search every time
 #rename tables from numbers to abbreviations#new filepath test
+#fix 101 to 0101 in IOSource IO code collumn and row
