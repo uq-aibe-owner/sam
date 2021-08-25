@@ -35,7 +35,7 @@ function tablecsv(c::Any, d::AbstractString)
     writedlm("tableCSV"*pathmark*d*".csv", withTitles, ',');
 end
 
-IOSource = ExcelReaders.readxlsheet("IOData"*pathmark*"5209055001DO001_201819.xls", "Table 5");
+IOSource = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"IOData"*pathmark*"5209055001DO001_201819.xls", "Table 5");
 
 #indexing vectors for initial data import groups
 intermediaryTotalsCol = findall(x -> occursin("T4", x), string.(IOSource[3,:]));
@@ -75,10 +75,10 @@ IOCapForm = findall(x -> occursin("Capital Formation", x), IONameCol);
 IOChangeInv = findall(x -> occursin("Changes in Inventories", x), IONameCol);
 
 #importing relevant ASNA data for table 5
-ASNAHouseCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204039_Household_Capital_Account.xls", "Data1");
-ASNANonFinCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204018_NonFin_Corp_Capital_Account.xls", "Data1");
-ASNAFinCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204026_Fin_Corp_Capital_Account.xls", "Data1");
-ASNAGovCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204032_GenGov_Capital_Account.xls", "Data1");
+ASNAHouseCap = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204039_Household_Capital_Account.xls", "Data1");
+ASNANonFinCap = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204018_NonFin_Corp_Capital_Account.xls", "Data1");
+ASNAFinCap = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204026_Fin_Corp_Capital_Account.xls", "Data1");
+ASNAGovCap = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204032_GenGov_Capital_Account.xls", "Data1");
 ASNAYearRow = findall(x -> occursin("2019", x), string.(ASNAHouseCap[:,1]));
 
 #table 5
@@ -198,11 +198,11 @@ table5b[table5bRowDict["Total change in inventories"],:]);
 
 #table 6
 #importing relevant ASNA data
-ASNAHouseInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204036_Household_Income_Account.xls", "Data1");
-ASNANonFinInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204017_NonFin_Corp_Income_Account.xls", "Data1");
-ASNAFinInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204025_Fin_Corp_Income_Account.xls", "Data1");
-ASNAGovInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204030_GenGov_Income_Account.xls", "Data1");
-ASNAExtInc = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204043_External_Accounts.xls", "Data1");
+ASNAHouseInc = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204036_Household_Income_Account.xls", "Data1");
+ASNANonFinInc = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204017_NonFin_Corp_Income_Account.xls", "Data1");
+ASNAFinInc = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204025_Fin_Corp_Income_Account.xls", "Data1");
+ASNAGovInc = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204030_GenGov_Income_Account.xls", "Data1");
+ASNAExtInc = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204043_External_Accounts.xls", "Data1");
 #initialising table
 tableName = ["Households", "Non-Financial Corporations", "Financial Corporations", "General Government", "External", "Total"];
 tableDict = Dict(tableName .=> [1:1:length(tableName);]);
@@ -668,11 +668,11 @@ end
 #table 16b
 #importing relevant data from ASNA
 #importing relevant ASNA data
-ASNAHouseFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204040_Household_Financial_Account.xls", "Data1");
-ASNANonFinFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204019_NonFin_Corp_Financial_Account.xls", "Data1");
-ASNAFinFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204027_Fin_Corp_Financial_Account.xls", "Data1");
-ASNAGovFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204033_GenGov_Financial_Account.xls", "Data1");
-ASNAExtFin = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204044_External_Financial_Account.xls", "Data1");
+ASNAHouseFin = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204040_Household_Financial_Account.xls", "Data1");
+ASNANonFinFin = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204019_NonFin_Corp_Financial_Account.xls", "Data1");
+ASNAFinFin = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204027_Fin_Corp_Financial_Account.xls", "Data1");
+ASNAGovFin = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204033_GenGov_Financial_Account.xls", "Data1");
+ASNAExtFin = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204044_External_Financial_Account.xls", "Data1");
 #initialising table
 #make no spaces
 table16bNameRow = ["Acquisitionoffinancialassets-MonetarygoldandSDRs;","Acquisitionoffinancialassets-Currencyanddeposits;",
@@ -784,7 +784,7 @@ function myfind(c)
     end
     return resize!(a, count-1)
 end
-
+table17=zeros(length(tableName), length(tableName))
 for ring in [1:1:length(table17TableNames);]
     println("this round is number ", ring)
     table17=zeros(length(tableName), length(tableName));
@@ -843,7 +843,7 @@ table19TotRow = table19[:,tableDict["Total"]]+table16a[table16aRowDict["Netlendi
 table19EAndO = table19[tableDict["Total"],:]-table19TotRow;
 
 #final bits and pieces to fill in gaps
-ASNAIncomeFromGDP = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204006_Income_from_GDP.xls", "Data1");
+ASNAIncomeFromGDP = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204006_Income_from_GDP.xls", "Data1");
 productionToHouseholds = (first(ASNAIncomeFromGDP[findall(x -> occursin("2019", x), string.(ASNAIncomeFromGDP[:,1])),findall(x -> occursin("Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAIncomeFromGDP[1,:])))])
 -first(ASNAExtInc[findall(x -> occursin("2019", x), string.(ASNAExtInc[:,1])),findall(x -> occursin("receivable-Compensationofemployees;", x), filter.(x -> !isspace(x), string.(ASNAExtInc[1,:])))])
 +first(ASNAIncomeFromGDP[findall(x -> occursin("2019", x), string.(ASNAIncomeFromGDP[:,1])),findall(x -> occursin("Dwellingsownedbypersons;Grossoperatingsurplus;", x), filter.(x -> !isspace(x), string.(ASNAIncomeFromGDP[1,:])))])
@@ -869,7 +869,7 @@ currentToCurrent[tableDict["External"],tableDict["External"]] = currentToCurrent
 #capital to capital transfers
 capitalToCapital = transpose(table14) + transpose(table15) + table19
 
-ASNAConsFixCap = ExcelReaders.readxlsheet("ASNAData"*pathmark*"5204047_Cons_Fixed_Capital_By_Industry.xls", "Data1");
+ASNAConsFixCap = ExcelReaders.readxlsheet("."*pathmark*"data"*pathmark*"ASNAData"*pathmark*"5204047_Cons_Fixed_Capital_By_Industry.xls", "Data1");
 
 samName = ["Production Activities", "Factors of Production", "Households Current Account", "Non-Financial Corporations Current Account",
 "Financial Corporations Current Account", "Government Current Account", "Foreigners Current Account",
